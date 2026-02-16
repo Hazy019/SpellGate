@@ -1,0 +1,2 @@
+# SpellGate
+SpellGate is a Python-based parental control application designed to gamify screen time. It functions as a "Kiosk Mode" lock screen upon Windows login, requiring users to complete a spelling and vocabulary quiz in order to "unlock" the computer for a specified duration. Key features include dynamic difficulty adjustment (DDA), automated system shutdown when the time expires, and a secure parent override mode. The application is built using Python, CustomTkinter, and JSON for data management.
