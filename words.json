@@ -1,0 +1,18 @@
+{
+    "levels": {
+        "1": [
+            "CAT", "DOG", "SUN", "BUS", 
+            "MOM", "DAD", "BOX", "RUN", 
+            "SKY", "FOX", "HAT", "LEG"
+        ],
+        "2": [
+            "FROG", "MILK", "JUMP", "STOP", 
+            "FAST", "LION", "DUCK", "FISH", 
+            "BIRD", "BLUE", "PINK", "TREE"
+        ]
+    },
+    "user_progress": {
+        "current_level": "1",
+        "xp": 0
+    }
+}
