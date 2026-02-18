@@ -1,0 +1,54 @@
+import sys
+from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QFont
+
+class TimeWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+        
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_display)
+        self.timer.start(1000) 
+
+    def initUI(self):
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint | 
+            Qt.WindowType.WindowStaysOnTopHint |
+            Qt.WindowType.Tool # Prevents it from showing in the taskbar
+        )
+        
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setStyleSheet("background-color: rgba(0, 0, 0, 150); border-radius: 10px;")
+
+        self.layout = QVBoxLayout()
+        self.label = QLabel("00:00", self)
+        self.label.setFont(QFont("Arial", 18, QFont.Weight.Bold))
+        self.label.setStyleSheet("color: white;")
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        self.layout.addWidget(self.label)
+        self.setLayout(self.layout)
+
+        self.setGeometry(100, 100, 150, 60) 
+
+    def update_display(self):
+        
+        try:
+            with open("data/time_bank.txt", "r") as f:
+                seconds = int(f.read())
+        except:
+            seconds = 0
+
+        mins, secs = divmod(seconds, 60)
+        self.label.setText(f"{mins:02d}:{secs:02d}")
+        
+        if seconds < 60:
+            self.label.setStyleSheet("color: #FF4B4B;") 
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = TimeWidget()
+    window.show()
+    sys.exit(app.exec())
