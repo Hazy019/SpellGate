@@ -1,93 +1,60 @@
-import customtkinter as ctk
-from tkinter import messagebox
-import os
+import sys
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtGui import QKeySequence, QShortcut, QFont
+from PyQt6.QtCore import Qt, QTimer
+from modules.kiosk_manager import KioskManager
+from modules.ui_scenes import MemorizationScene
 
-PARENT_PASSWORD = "15302531"
-APP_TITLE = "SpellGate: Student Portal"
-
-class SpellGateApp(ctk.CTk):
+class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("Spelling Bee")
+        self.resize(1024, 768)
 
-        self.title(APP_TITLE)
-        self.geometry("800x600")
+        self.current_scene = MemorizationScene(self)
+        self.setCentraWidget(self.current_scene)
 
-        self.attributes("-fullscreen", True)
-        self.overrideredirect(True)
-        self.attributes("-topmost", True)
+        # try:
+        #     with open("data/time_bank.txt", "r") as f:
+        #         self.time_remaining = int(f.read())
 
-        self.bind("<Control-Alt-p>", self.admin_unlock)
+        # except:
+        #     self.time_remaining = 15
 
-        self.container =ctk.CTkFrame(self)
-        self.container.pack(fill = "both", expand = True)
+        # self.setWindowTitle("Spelling Bee")
+        # self.central_widget = QWidget()
+        # self.setCentralWidget(self.central_widget)
+        # self.layout = QVBoxLayout(self.central_widget)
 
-        self.frames = {}
+        # self.label = QLabel(f"Time Remaining: {self.time_remaining}s", self)
+        # self.label.setFont(QFont("Arial", 40, QFont.Weight.Bold))
+        # self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # self.layout.addWidget(self.label)
 
-        for F in (StudyFrame, TestFrame, TimerFrame):
-            page_name = F.__name__
-            frame = F(parent = self.container, controller = self)
-            self.frames[page_name] = frame
+        self.kiosk = KioskManager(self)
+        self.kiosk.enable_kiosk_mode()
 
-            frame.grid(row = 0, column = 0, sticky = "nsew")
+        self.exit_shortcut = QShortcut(QKeySequence("Ctrl+Shift+P"), self)
+        self.exit_shortcut.activated.connect(self.kiosk.disable_kiosk_mode)
+        
+    #     self.timer = QTimer(self)
+    #     self.timer.timeout.connect(self.countdown)
+    #     self.timer.start(1000)
 
-        self.container.grid_rowconfigure(0, weight=1)
-        self.container.grid_columnconfigure(0, weight=1)
+    # def countdown(self):
+    #     if self.time_remaining > 0:
+    #         self.time_remaining -=1
+    #         self.label.setText(f"Time Remaining: {self.time_remaining}s")
 
-        self.show_frame("StudyFrame")
+    #     else:
+    #         self.timer.stop()
+    #         self.label.setText("SHUTDOWN INITIATED")
+    #         self.label.setStyleSheet("color:red;")
 
-        def show_frame(self, page_name):
-            '''Show a frame for the given page name'''
-            frame = self.frames[page_name]
-            frame.tkraise()
+    #         print("If this was real the PC would shutdown now.")
 
-        def admin_unlock(self, event=None):
-            dialog = ctk.CTkInputDialog(
-                text="Enter Parent Password:",
-                title="Admin Unlock"
-            )
-            if dialog.get_input() == PARENT_PASSWORD:
-                self.destroy()
-            else:
-                messagebox.showerror("Error", "Wrong Password!")
 
-class StudyFrame(ctk.CTkFrame):
-    def __init__(self, parent, controller):
-        super().__init__(parent)
-        self.controller = controller
-        self.remaining_time = 100
-
-        label = ctk.CTkLabel(
-            self,
-            text = "Phase 1: Study Mode",
-            font = ("Arial", 30)
-        )
-        label.pack(pady=20)
-
-        self.timer_label = ctk.CTkLabel(
-            self,
-            text = f"Time Remaining: {self.remaining_time} seconds",
-            font = ("Arial", 20),
-            text_color = "red"
-        )
-        self.timer_label.pack(pady = 20)
-
-        self.word_display = ctk.CTkLabel(
-            self,
-            width = 400,
-            height = 200,
-            font = ("Arial", 20)
-        )
-        self.word_display.insert("0.0", "1. CAT\n2. DOG\n3. SUN\n(Words will go here...)")
-        self.word_display.configure(state = "disabled")
-        self.word_display.pack(pady = 20)
-
-        btn = ctk.CTkButton(
-            self,
-            text = "Start Test",
-            command = lambda: controller.show_frame("TestFrame")
-        )
-        btn.pack(pady = 20)
-    
 if __name__ == "__main__":
-    app = SpellGateApp()
-    app.mainloop()
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    sys.exit(app.exec())

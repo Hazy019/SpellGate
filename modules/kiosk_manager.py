@@ -6,25 +6,22 @@ from PyQt6.QtCore import Qt
 class KioskManager:
     def __init__(self, main_window):
         self.window = main_window
-        self.is_locked = False
 
     def enable_kiosk_mode(self):
-        """Locks the screen and blocks keys."""
-        self.is_locked = True
-
-        self.window.showWindowFlags()
+        """Forces Fullscreen and (safely) prepares to block keys."""
+        self.window.showFullScreen()
         self.window.setWindowFlags(
             Qt.WindowType.FramelessWindowHint |
             Qt.WindowType.WindowStaysOnTopHint
         )
         self.window.show()
 
-        try:
-            keyboard.block_key('windows')
-            keyboard.block_key('alt')
-            keyboard.block_key('tab')
-        except ImportError:
-            print("keyboard library not found or permission denied.")
+        #try:
+        #    keyboard.block_key('windows')
+        #    keyboard.block_key('alt')
+        #    keyboard.block_key('tab')
+        #except ImportError:
+        #    print("keyboard library not found or permission denied.")
 
     def disable_kiosk_mode(self):
         """Unlocks the screen (For parents/debugging)."""
@@ -35,9 +32,7 @@ class KioskManager:
         except:
             pass
 
-        self.window.showNormal()
-        self.window.setWindowFlags(Qt.WindowType.Window)
-        self.window.show()
+        self.window.close()
 
     def check_exit_code(self):
         """
