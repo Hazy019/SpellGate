@@ -1,6 +1,7 @@
-from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QPoint, QEasingCurve, QRect
+from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QPoint, QEasingCurve
 from PyQt6.QtGui import QFont, QColor
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QGridLayout, QPushButton, QGraphicsDropShadowEffect
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QGridLayout, 
+                             QPushButton, QGraphicsDropShadowEffect, QLineEdit)
 
 class MemorizationScene(QWidget):
     def __init__(self, parent_window):
@@ -8,9 +9,8 @@ class MemorizationScene(QWidget):
         self.parent_window = parent_window
 
         self.words = [
-            "BIRD", "FISH", "TREE", "STAR",
-            "MOON", "FIRE", "SNOW", "WIND",
-            "RAIN", "DESK", "BOOK", "TIME"
+            "BIRD", "FISH", "TREE", "STAR", "MOON", "FIRE", 
+            "SNOW", "WIND", "RAIN", "DESK", "BOOK", "TIME"
         ]
 
         self.time_left = 300
@@ -19,7 +19,7 @@ class MemorizationScene(QWidget):
     def initUI(self):
         self.setStyleSheet("""
             QWidget {
-                        background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #E0FFF, stop:1 #B2EBF2);
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #E0FFFF, stop:1 #B2EBF2);
             }
         """)
 
@@ -81,7 +81,7 @@ class MemorizationScene(QWidget):
         main_layout.addWidget(self.ready_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self.start_timer()
-        self.animate_cards_in()
+        QTimer.singleShot(100, self.animate_cards_in)
 
     def create_word_card(self, word):
         btn = QPushButton(word)
@@ -102,7 +102,7 @@ class MemorizationScene(QWidget):
         """)
 
         shadow = QGraphicsDropShadowEffect()
-        shadow.setBlueRadius(15)
+        shadow.setBlurRadius(15)
         shadow.setColor(QColor(0, 188, 212, 80))
         shadow.setOffset(0, 5)
         btn.setGraphicsEffect(shadow)
@@ -126,21 +126,122 @@ class MemorizationScene(QWidget):
             self.animations.append(anim)
             delay += 150
 
-        def start_timer(self):
+    def start_timer(self):
             self.study_timer =QTimer(self)
             self.study_timer.timeout.connect(self.update_timer)
             self.study_timer.start(1000)
 
-        def update_timer(self):
-            if self.time_left > 0:
-                self.time_left -= 1
-                mins, secs = divmod(self.time_left, 60)
-                self.timer_label.setText(f"{mins:02d}:{secs:02d}")
+    def update_timer(self):
+        if self.time_left > 0:
+            self.time_left -= 1
+            mins, secs = divmod(self.time_left, 60)
+            self.timer_label.setText(f"{mins:02d}:{secs:02d}")
 
-            else:
-                self.study_timer.stop()
-                self.finish_memorization()
-
-        def finish_memorization(self):
+        else:
             self.study_timer.stop()
-            print("Moving to Phase 2: Sequential Recall!")
+            self.finish_memorization()
+
+    def finish_memorization(self):
+        self.study_timer.stop()
+        self.parent_window.start_recall_phase(self.words)
+
+class RecallScene(QWidget):
+    def __init__(self, parent_window, words):
+        super().__init__(parent_window)
+        self.parent_window = parent_window
+        self.words = words
+        self.inputs = []
+        self.attempts = [0] * len(words)
+        self.initUI()
+
+    def initUI(self):
+        self.setStyleSheet("""
+            QWidget {
+                background: qlineargradientx1:0, y1:0, x2:1, y2:1, stop:0 #E0FFFF, stop:1 #B2EBF2);
+            }
+        """)
+
+        layout =QVBoxLayout(self)
+        layout.setContentsMargins(50, 50, 50, 50)
+
+        header = QLabel("Phase 2: Type the words in order!", self)
+        header.setFont(QFont("Arial", 24))
+        header.setStyleSheet("color: #00BCD4; background: transparent;")
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(header)
+
+        grid_widget = QWidget(self)
+        grid_layout = QGridLayout(grid_widget)
+        grid_layout.setSpacing(20)
+
+        row, col = 0, 0
+        for i, word in enumerate(self.words):
+            input_field = QLineEdit(self)
+            input_field.setPlaceholderText("_ " * len(word))
+            input_field.setFont(QFont("Arial", 18))
+            input_field.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            input_field.setStyleSheet("""
+                QLineEdit {
+                    background-color: white;
+                    border: 3px solid #E0E0E0;
+                    border-radius: 15px;
+                    padding: 15px;
+                    color: #2C3E50;
+                }
+                QLineEdit:focus {
+                    border: 3px solid #00BCD4;
+                }
+            """)
+            
+            input_field.returnPressed.connect(lambda idx=i: self.check_answer(idx))
+
+            grid_layout.addWidget(input_field, row, col)
+            self.inputs.append(input_field)
+
+            col += 1
+            if col > 3:
+                col = 0
+                row += 1
+
+        layout.addWidget(grid_widget)
+
+        self.study_again_btn = QPushButton("I Need to Study Again...", self)
+        self.study_again_btn.setVisible(False)
+        self.study_again_btn.setStyleSheet("background-color: #FF6B9D; color: whit; padding: 10px; border-radius: 10px;")
+        self.study_again_btn.clicked.connect(self.parent_window.show_memorization_phase)
+        layout.addWidget(self.study_again_btn, alignment=Qt.AlignmentFlag.AlignCenter)
+
+    def check_answer(self, index):
+        user_text = self.inputs[index].text().strip().upper()  
+        correct_word = self.words[index].upper()
+
+        if user_text == correct_word:
+            self.inputs[index].setEnabled(False)
+            self.inputs[index].setStyleSheet("background-color: #C8E6C9; border: 3px solid #4CAF50; border-radius: 15px; color: #2E7D32;")
+            self.check_overall_completion()
+        else:
+            self.wobble_animation(self.inputs[index])
+            self.attempts[index] += 1
+
+            if sum(self.attempts) >= 3:
+                self.study_again_btn.setVisible(True)
+
+    def wobble_animation(self, widget):
+        """Create the 'No' shake effect."""
+        anim = QPropertyAnimation(widget, b"pos")
+        anim.setDuration(50)
+        curr = widget.pos()
+
+        anim.setKeyValueAt(0, curr)
+        anim.setKeyValueAt(0.25, curr + QPoint(-10, 0))
+        anim.setKeyValueAt(0.75, curr + QPoint(10, 0))
+        anim.setKeyValueAt(1, curr)
+        anim.setLoopCount(3)
+        anim.start()
+
+    def check_overall_completion(self):
+        """Check if all words are filled correctly."""
+        if all(not inp.isEnabled() for inp in self.inputs):
+            print("Phase 2 Complete! Starting Phase 3 (Scrambled Spelling)...")
+
+            

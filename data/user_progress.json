@@ -1,5 +1,5 @@
 {
-    "masterd_words": ["cat", "dog"],
+    "mastered_words": ["cat", "dog"],
     "learning_pool": {
         "apple": {"correct_strikes": 1, "attempts":  2},
         "bridge": {"correct_strikes": 0, "attempts": 1}
