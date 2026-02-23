@@ -2,6 +2,7 @@ from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QPoint, QEasingCurve
 from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QGridLayout, 
                              QPushButton, QGraphicsDropShadowEffect, QLineEdit)
+from modules.game_logic import generate_scrambled
 
 class MemorizationScene(QWidget):
     def __init__(self, parent_window):
@@ -150,6 +151,7 @@ class RecallScene(QWidget):
         super().__init__(parent_window)
         self.parent_window = parent_window
         self.words = words
+        self.earned_seconds = 0
         self.inputs = []
         self.attempts = [0] * len(words)
         self.initUI()
@@ -157,7 +159,7 @@ class RecallScene(QWidget):
     def initUI(self):
         self.setStyleSheet("""
             QWidget {
-                background: qlineargradientx1:0, y1:0, x2:1, y2:1, stop:0 #E0FFFF, stop:1 #B2EBF2);
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #E0FFFF, stop:1 #B2EBF2);
             }
         """)
 
@@ -216,10 +218,15 @@ class RecallScene(QWidget):
         correct_word = self.words[index].upper()
 
         if user_text == correct_word:
+            self.earned_seconds += 120
             self.inputs[index].setEnabled(False)
             self.inputs[index].setStyleSheet("background-color: #C8E6C9; border: 3px solid #4CAF50; border-radius: 15px; color: #2E7D32;")
+            
+            print(f"Earned 120s! Total Phase 2 Bank: {self.earned_seconds}s")
+
             self.check_overall_completion()
         else:
+            self.earned_seconds = max(0, self.earned_seconds - 60)
             self.wobble_animation(self.inputs[index])
             self.attempts[index] += 1
 
@@ -242,6 +249,132 @@ class RecallScene(QWidget):
     def check_overall_completion(self):
         """Check if all words are filled correctly."""
         if all(not inp.isEnabled() for inp in self.inputs):
+            self.deposit_time_to_bank(self.earned_seconds)
             print("Phase 2 Complete! Starting Phase 3 (Scrambled Spelling)...")
+    
+    def deposit_time_to_bank(self, seconds_to_add):
+        """Adds Phase 2 earnings to the actual data/time_bank.txt"""
 
+        try:
+            with open ("data/time_bank.txt", "r") as f:
+                current_time = int(f.read().strip())
+
+            new_total = current_time + seconds_to_add
+
+            with open("data/time_bank.txt", "w") as f:
+                f.write(str(new_total))
+
+        except Exception as e:
+            print(f"Error saving time: {e}")
             
+class ScrambledPhase(Qwidget):
+    def __init__(self, parent_window, words):
+        super().__init__(parent_window)
+        self.parent_window = parent_window
+        self.words = words
+        self.current_index = 0
+        self.hints_used = 0
+        self.initUI()
+
+    def initUI(self):
+        self.setStyleSheet("""
+            QWidget {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #E0FFFF, stop:1 #B2EBF2);
+            }
+        """)
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(100, 50, 100, 50)
+
+        self.progress_label = QLabel(f"WORD {self.current_index + 1} OF {len(self.words)}", self)
+        self.progress_label.setFont(QFont("Arial", 18, QFont.Weight.Bold))
+        self.progress_label.setStyleSheet("color: #00BCD4")
+        self.layout.addWidget(self.progress_label, alignment = Qt.AlignmentFlag.AlignCenter)
+
+        self.scrambled_display = QLabel(self)
+        self.scrambled_display.setFont(QFont("Arial", 60, QFont.Weight.Black))
+        self.scrambled_display.setStyleSheet("color: #2C3E50; letter-spacing: 15px")
+        self.layout.addWidget(self.scrambled_display, alignment = Qt.AlignmentFlag.AlignCenter)
+
+        self.input_field = QLineEdit(self)
+        self.input_field.setFont(QFont("Arial", 28))
+        self.input_field.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.input_field.setStyleSheet("""
+            QLineEdit {
+                background-color: white;
+                border: 4px solid #FF6B9D;
+                border-radius: 20px;
+                padding: 10px;
+                max-width: 400px;
+            }
+        """)
+        self.input_field.returnPressed.connect(self.submit_answer)
+        self.layout.addWidget(self.input_field, alignment = Qt.AlignmentFlag.AlignCenter)
+
+        self.hint_btn = QPushButton("NEED A HINT? (-1 min)", self)
+        self.hint_btn.setStyleSheet("background-color: #FFD700; color: #333; padding: 10px; border-radius: 10px;")
+        self.hint_btn.clicked.connect(self.use_hint)
+        self.layout.addWidget(self.hint_btn, alignment = Qt.AlignmentFlag.AlignCenter)
+
+        self.load_word()
+
+    def load_word(self):
+        """Prepares the next scrambled word and resets the UI."""
+        self.input_field.clear()
+        self.input_field.setFocus()
+        self.hints_used = 0
+
+        raw_word = self.words[self.current_index]
+        self.scrambled_word = generate_scrambled(raw_word)
+        self.scrambled_display.setText(f"WORD {self.current_index + 1} OF {len(self.words)}")
+
+    def submit_answer(self):
+        answer = self.input_field.text().strip().upper()
+        correct = self.words[self.current_index].upper()
+
+        if answer == correct:
+            reward = 300 - (self.hints_used * 60)
+            self.deposit_time(reward)
+            self.next_word
+        else:
+            self.deposit_time(-180)
+            self.wobble_input()
+
+    def use_hint(self):
+        """Reveals the actual with briefly or provides one letter at a cost"""
+        self.hints_used += 1
+        correct = self.words[self.current_index]
+        self.scrambled_display.setText(correct[:2] + self.scrambled_word[2:])
+        print(f"Hint used. Reward reduced for this word.")
+
+    def deposit_time(self, seconds):
+        """Updates the Filing Cabinet (time_bank.txt) instantly."""
+        try:
+            with open("data/time_bank.txt", "r") as f:
+                current = int(f.read().strip())
+
+            new_total = max(0, current + seconds)
+
+            with open("data/time_bank.txt","w") as f:
+                f.write(str(new_total))
+
+        except Exception as e:
+            print(f"Economy Error: {e}")
+
+    def next_word(self):
+        self.current_index += 1
+        if self.current_index < len(self.words):
+            self.load_word()
+        else:
+            self.parent_window.show_final_results()
+        
+    def wobble_input(self):
+        """Same wobble logic as Phase 2 to signal incorrect answer."""
+        anim = QPropertyAnimation(self.input_field, b"pos")
+        anim.setDuration(50)
+        curr = self.input_field.pos()
+        anim.setKeyValueAt(0, curr)
+        anim.setKeyValueAt(0.25, curr + QPoint(-15, 0))
+        anim.setKeyValueAt(0.75, curr + QPoint(15,0))
+        anim.setKeyValueAt(1, curr)
+        anim.setLoopCount(3)
+        anim.start()
