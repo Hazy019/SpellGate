@@ -1,3 +1,4 @@
+import pyttsx3
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QPoint, QEasingCurve
 from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QGridLayout, 
@@ -8,6 +9,9 @@ class MemorizationScene(QWidget):
     def __init__(self, parent_window):
         super().__init__(parent_window)
         self.parent_window = parent_window
+
+        self.speech_engine = pyttsx3.init()
+        self.speech_engine.setProperty('rate', 150)
 
         self.words = [
             "BIRD", "FISH", "TREE", "STAR", "MOON", "FIRE", 
@@ -108,7 +112,14 @@ class MemorizationScene(QWidget):
         shadow.setOffset(0, 5)
         btn.setGraphicsEffect(shadow)
 
+        btn.clicked.connect(lambda: self.speak_word(word))
+
         return btn
+    
+    def speak_word(self, word):
+        """AI Teacher speaks the word out loud."""
+        self.speech_engine.say(word)
+        self.speech_engine.runAndWait()
     
     def animation_cards_in(self):
         """Create a slick staggered animation pop-in animation for the cards."""
