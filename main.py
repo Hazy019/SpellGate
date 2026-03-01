@@ -1,32 +1,46 @@
 import sys
 import os
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget
-from PyQt6.QtGui import QKeySequence, QShortcut, QFont
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QGraphicsDropShadowEffect
+from PyQt6.QtGui import QKeySequence, QShortcut, QFont, QColor, QFontDatabase
 from PyQt6.QtCore import Qt, QTimer, QPoint
 
 from modules.kiosk_manager import KioskManager
 from modules.ui_scenes import MemorizationScene, RecallScene, ScrambledPhase, SummaryScene
-class FloatingTimer(QWidget):
-    """The small widget that stays on screen during playtime."""
+
+class GlassyTimer(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
+        font_id = QFontDatabase.addApplicationFont("assets/Orbitron-Bold.ttf")
+        font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
+
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setStyleSheet("background-color: rgba(0,0,0,150); border-radius; 10px")
+        self.setWindowOpacity(0.9)
 
-        layout = QVBoxLayout(self)
-        self.label = QLabel("00:00", self)
-        self.label.setFont(QFont("Arial", 18 , QFont.Weight.Bold))
-        self.label.setStyleSheet("color: white;")
+        self.container = QWidget(self)
+        self.container.setObjectName("TimerContainer")
+        self.container.setStyleSheet("""
+            QWidget#TimerContainer {
+                background-color: rgba(15, 23, 42, 200);
+                border-radius: 20px;
+                border: 2px solid #38BDF8;
+            }
+        """)
+
+        self.shadow = QGraphicsDropShadowEffect()
+        self.shadow.setBlurRadius(20)
+        self.shadow.setColor(QColor(56, 189, 248, 150))
+        self.container.setGraphicsEffect(self.shadow)
+
+        layout = QVBoxLayout(self.container)
+        self.label = QLabel("00:00:00", self)
+        self.label.setFont(QFont(font_family, 24))
+        self.label.setStyleSheet("color: #38BDF8; padding: 10px;")
         layout.addWidget(self.label)
-        self.setGeometry(50, 50, 120, 50)
 
-        self.drag_position = QPoint()
-
-        self.time_left = self.load_time()
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_time)
-        self.timer.start(1000)
+        self.setLayout(QVBoxLayout())
+        self.layout().addWidget(self.container)
+        self.setGeometry(100, 100, 220, 100)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -100,7 +114,7 @@ class MainWindow(QMainWindow):
         self.kiosk.disable_kiosk_mode()
         self.hide()
 
-        self.floating_tracker = FloatingTimer()
+        self.floating_tracker = GlassyTimer()
         self.floating_tracker.show()
 
     def emergency_exit(self):

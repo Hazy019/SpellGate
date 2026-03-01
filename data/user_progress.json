@@ -14,6 +14,38 @@
     ],
     "learning_pool": {
         "TIME": {
+            "correct_strikes": 2,
+            "attempts": 0
+        },
+        "BEAR": {
+            "correct_strikes": 1,
+            "attempts": 0
+        },
+        "GOLD": {
+            "correct_strikes": 1,
+            "attempts": 0
+        },
+        "LEAF": {
+            "correct_strikes": 1,
+            "attempts": 0
+        },
+        "DUCK": {
+            "correct_strikes": 1,
+            "attempts": 0
+        },
+        "WOLF": {
+            "correct_strikes": 1,
+            "attempts": 0
+        },
+        "FROG": {
+            "correct_strikes": 1,
+            "attempts": 0
+        },
+        "LION": {
+            "correct_strikes": 1,
+            "attempts": 0
+        },
+        "HAWK": {
             "correct_strikes": 1,
             "attempts": 0
         }

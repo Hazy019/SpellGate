@@ -1,41 +1,108 @@
 import json
 import random
-from modules.audio import play_audio # Pulls from our new robust audio engine!
+from modules.audio import play_audio
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QGridLayout, 
                              QPushButton, QGraphicsDropShadowEffect, QLineEdit)
-from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QPoint, QEasingCurve
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QPoint, QEasingCurve, QVariantAnimation
+from PyQt6.QtGui import QFont, QColor, QFontDatabase
 from modules.game_logic import generate_scrambled, update_mastery, get_next_words, save_progress
 
+DARK_THEME = """
+    QWidget { background-color: #0F172A; color: #F8FAFC; font-family: 'Segoe UI'; }
+    QLabel#Header { color: #38BDF8; font-weight: bold; }
+    QLineEdit { 
+        background-color: #1E293B; border: 2px solid #334155; 
+        border-radius: 15px; padding: 12px; color: #38BDF8; font-size: 18px;
+    }
+    QPushButton#WordCard { 
+        background-color: #1E293B; border: 2px solid #334155; 
+        border-radius: 12px; color: #F8FAFC; padding: 15px;
+    }
+    QPushButton#ActionBtn { 
+        background-color: #38BDF8; color: #0F172A; border-radius: 20px; padding: 15px; font-weight: bold;
+    }
+"""
 
-# --- CUSTOM PHASE 2 TEXT BOX ---
+LIGHT_THEME = """
+    QWidget { background-color: #F1F5F9; color: #1E293B; font-family: 'Segoe UI'; }
+    QLabel#Header { color: #0EA5E9; font-weight: bold; }
+    QLineEdit { 
+        background-color: #FFFFFF; border: 2px solid #E2E8F0; 
+        border-radius: 15px; padding: 12px; color: #0EA5E9; font-size: 18px;
+    }
+    QPushButton#WordCard { 
+        background-color: #FFFFFF; border: 2px solid #E2E8F0; 
+        border-radius: 12px; color: #1E293B; padding: 15px;
+    }
+    QPushButton#ActionBtn { 
+        background-color: #0EA5E9; color: #FFFFFF; border-radius: 20px; padding: 15px; font-weight: bold;
+    }
+"""
+
 class SpeakingLineEdit(QLineEdit):
     """A custom text box that tells the user what word to spell and auto-capitalizes."""
     def __init__(self, word, parent=None):
         super().__init__(parent)
         self.target_word = word
-        # FEATURE 1: Instantly force uppercase as the user types!
         self.textChanged.connect(self.force_uppercase)
+
+        self.glow = QGraphicsDropShadowEffect()
+        self.glow.setBlurRadius(10)
+        self.glow.setColor(QColor(56, 189, 248, 0)) # Fixed QColor wrapper
+        self.setGraphicsEffect(self.glow)
 
     def force_uppercase(self, text):
         if text != text.upper():
             self.setText(text.upper())
 
-    def mousePressEvent(self, event):
-        super().mousePressEvent(event)
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
         play_audio(f"Spell {self.target_word}")
+        self.start_glow()
 
+    def start_glow(self):
+        self.anim = QVariantAnimation(self)
+        self.anim.setDuration(1000)
+        self.anim.setStartValue(10)
+        self.anim.setEndValue(25)
+        self.anim.setDirection(QVariantAnimation.Direction.Forward)
+        self.anim.valueChanged.connect(lambda v: self.glow.setBlurRadius(v))
+        self.anim.valueChanged.connect(lambda v: self.glow.setColor(QColor(56, 189, 248, int(v*10))))
+        self.anim.setLoopCount(-1)
+        self.anim.start()
 
-# --- PHASE 1 ---
-class MemorizationScene(QWidget):
+class BaseScene(QWidget):
     def __init__(self, parent_window):
         super().__init__(parent_window)
         self.parent_window = parent_window
-        self.time_left = 300 
-        
+        self.is_dark = True
+
+        font_id = QFontDatabase.addApplicationFont("assets/Orbitron-Bold.ttf")
+        self.orbitron_family = QFontDatabase.applicationFontFamilies(font_id)[0] if font_id != -1 else "Arial"
+
+    def apply_current_theme(self):
+        self.setStyleSheet(DARK_THEME if self.is_dark else LIGHT_THEME)
+
+    def create_theme_toggle(self, layout):
+        self.toggle_btn = QPushButton("🌙" if self.is_dark else "☀️")
+        self.toggle_btn.setFixedSize(60, 40)
+        self.toggle_btn.setStyleSheet("background: transparent; font-size: 20px; border: none;")
+        self.toggle_btn.clicked.connect(self.switch_theme)
+        layout.addWidget(self.toggle_btn, alignment=Qt.AlignmentFlag.AlignRight)
+
+    def switch_theme(self):
+        self.is_dark = not self.is_dark
+        self.toggle_btn.setText("🌙" if self.is_dark else "☀️")
+        self.apply_current_theme()
+
+class MemorizationScene(BaseScene): 
+    def __init__(self, parent_window):
+        super().__init__(parent_window)
+        self.time_left = 300
         self.load_data()
         self.initUI()
+        self.apply_current_theme()
 
     def load_data(self):
         try:
@@ -47,24 +114,21 @@ class MemorizationScene(QWidget):
         self.words = get_next_words(self.progress_data, "assists/words.csv", count=12)
 
     def initUI(self):
-        self.setStyleSheet("QWidget { background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #E0FFFF, stop:1 #B2EBF2); }")
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(50, 50, 50, 50)
+        self.create_theme_toggle(layout) 
         
-        self.header = QLabel("MEMORIZE!", self)
-        self.header.setFont(QFont("Arial", 36, QFont.Weight.Black))
-        self.header.setStyleSheet("color: #00BCD4; background: transparent;")
-        self.header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.header)
+        header = QLabel("AI MEMORY MODULE", self)
+        header.setObjectName("Header")
+        header.setFont(QFont(self.orbitron_family, 32))
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(header)
 
         self.timer_label = QLabel("05:00", self)
-        self.timer_label.setFont(QFont("Arial", 28, QFont.Weight.Bold))
-        self.timer_label.setStyleSheet("color: #FF6B9D; background: transparent;")
+        self.timer_label.setFont(QFont(self.orbitron_family, 24))
         self.timer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.timer_label)
 
         grid_widget = QWidget(self)
-        grid_widget.setStyleSheet("background: transparent;")
         grid_layout = QGridLayout(grid_widget)
         
         self.cards = []
@@ -79,8 +143,8 @@ class MemorizationScene(QWidget):
                 row += 1
         layout.addWidget(grid_widget)
 
-        self.ready_btn = QPushButton("I'M READY!", self)
-        self.ready_btn.setStyleSheet("background-color: #FFD700; font-size: 24px; font-weight: bold; border-radius: 25px; padding: 15px;")
+        self.ready_btn = QPushButton("INITIATE RECALL", self)
+        self.ready_btn.setObjectName("ActionBtn")
         self.ready_btn.clicked.connect(self.finish_memorization)
         layout.addWidget(self.ready_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -92,8 +156,8 @@ class MemorizationScene(QWidget):
 
     def create_word_card(self, word):
         btn = QPushButton(word)
-        btn.setFont(QFont("Arial", 20, QFont.Weight.Bold))
-        btn.setStyleSheet("background-color: white; border-radius: 15px; border: 3px solid #E0E0E0; padding: 20px;")
+        btn.setObjectName("WordCard") 
+        btn.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
         btn.clicked.connect(lambda: play_audio(word))
         return btn
 
@@ -121,7 +185,6 @@ class MemorizationScene(QWidget):
     def finish_memorization(self):
         self.study_timer.stop()
         self.parent_window.start_recall_phase(self.words)
-
 
 # --- PHASE 2 ---
 class RecallScene(QWidget):
