@@ -136,6 +136,12 @@ ENV/
 env.bak/
 venv.bak/
 
+# SpellGate Secrets
+gemini.env
+/dist/
+/build/
+*.spec
+
 # Spyder project settings
 .spyderproject
 .spyproject
