@@ -80,6 +80,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("SpellGate Lock")
+        self.setStyleSheet("QMainWindow { background-color: #0a0a0a; }")
 
         try:
             with open("data/time_bank.txt", "w") as f:
@@ -92,6 +93,9 @@ class MainWindow(QMainWindow):
 
         self.exit_shortcut = QShortcut(QKeySequence("Ctrl+Shift+P"), self)
         self.exit_shortcut.activated.connect(self.emergency_exit)
+
+        self.showFullScreen()          # forces true fullscreen
+        self.setContentsMargins(0,0,0,0)
 
         self.show_memorization_phase()
 
