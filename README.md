@@ -1,53 +1,93 @@
-# SpellGate: Gamified Screen Lock
+# 🕹️ SPELLGATE: ARCADE KIOSK EDITION
 
-**SpellGate** is an educational productivity tool designed to transform computer screen time into a reward for learning. Built with Python and PyQt6, the application locks the Windows environment in a secure Kiosk mode upon startup. To unlock the PC, the user must successfully complete a 3-phase spelling bee.
+**SPELLGATE** is a high-stakes educational kiosk that transforms screen time into a reward. Locked behind a neon-drenched retro aesthetic, users must prove their spelling mastery to earn every second of computer access.
 
-Correct answers reward the user with banked computer playtime, while mistakes deduct time, teaching both spelling mastery and resource management.
+> [!IMPORTANT]
+> **SYSTEM LOCKED:** This application is designed to run in Fullscreen Kiosk Mode. It blocks system keys (Windows, Alt+Tab) to ensure the educational mission is completed.
 
-## Key Features
+---
 
-* **Secure Kiosk Lock:** Utilizes keyboard hooks and frameless window generation to lock the system until the educational module is complete.
+## 🚀 THE 3-PHASE CHALLENGE
 
-* **3-Phase Learning System:**
+1.  **PHASE 1: MEMORIZATION**
+    *   Study 12 words curated by the **Google Gemini AI**.
+    *   Listen to high-fidelity TTS pronunciations.
+    *   *Goal:* Commit the sequence to memory before the timer hits zero.
 
-    * **Phase 1 (Memorize):** Interactive flashcards with AI Text-to-Speech pronunciation.
+2.  **PHASE 2: SEQUENTIAL RECALL**
+    *   Type all 12 words in the exact order they appeared.
+    *   **Economy:** `+5 Minutes` for every success | `-5 Minutes` for every error.
 
-    * **Phase 2 (Recall):** Sequential recall typing to build memory muscle.
+3.  **PHASE 3: SCRAMBLED FILL-IN**
+    *   Solve C_t style puzzles for the mastered word list.
+    *   Use hints wisely—they cost precious playtime!
 
-    * **Phase 3 (Scrambled):** Randomized puzzle-solving with dynamic letter hiding based on word length.
+---
 
-* **Time-Bank Economy:** A mathematically balanced reward system (+5 mins for correct, -3 mins for errors, -1 min for hints).
+## 🛡️ KIOSK SECURITY & CONTROLS
 
-* **Smart AI Teacher (The Bridge):** Tracks strikes and attempts in a JSON database, automatically promoting mastered words and pulling new challenges from a CSV master library.
+*   **HARD LOCK:** The application stay on top of all windows and suppresses the Windows Key, Alt+Tab, and Escape.
+*   **AUTO-SHUTDOWN:** If the Draggable Timer hits `00:00:00`, the system triggers an OS-level shutdown command (`shutdown /s /t 60`).
+*   **PARENT OVERRIDE:** Press `Ctrl + Shift + P` at any time to bypass the lock and exit the application.
 
-* **Draggable UI Tracker:** Upon unlocking, a sleek, draggable overlay remains on the screen, tracking the remaining earned playtime (HH:MM:SS).
+---
 
-## Tech Stack
+## 📦 BUILDING THE EXECUTABLE (.EXE)
 
-* **Language:** Python 3.x
-* **GUI Framework:** PyQt6
-* **Audio Engine:** pyttsx3 (with queue threading and COM initialization for SAPI5 stability)
-* **System Control:** keyboard, os, pywin32
+To transform the Python source code into a standalone arcade executable:
 
-## Audio Subsystem
+1.  **Install Build Tools:**
+    ```bash
+    pip install pyinstaller
+    ```
 
-Text-to-speech is provided via ``pyttsx3`` but the Windows SAPI5 engine is
-not thread-safe.  To prevent crashes when users click rapidly we employ a
-producer/consumer queue:
+2.  **Run the Build Script:**
+    We've provided an automated script that handles asset bundling and formatting:
+    ```bash
+    python package_app.py
+    ```
 
-* UI code calls ``modules.audio.play_audio(text)`` which quickly enqueues the
-  phrase.
-* A dedicated background thread initializes COM (``pythoncom.CoInitialize()``)
-  and processes the queue one item at a time, calling ``engine.say`` and
-  ``engine.runAndWait()``.
+3.  **Result:** 
+    Open the `dist` folder. You will find `SpellGate.exe` ready for kiosk deployment.
 
-This keeps audio off the main Qt thread, avoids overlapping runloops, and
-makes the app stable even under rapid user interaction.
+---
 
+## 🛠️ INSTALLATION
 
-## Installation & Setup
+1.  **Clone & Navigate:**
+    ```bash
+    git clone https://github.com/yourusername/SpellGate.git
+    cd SpellGate
+    ```
 
-1. **Clone the repository:**
-   ```bash
-   git clone [https://github.com/yourusername/SpellGate.git](https://github.com/yourusername/SpellGate.git)
-   cd SpellGate
+2.  **Install Dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+3.  **Configure AI (Optional but Recommended):**
+    Create a `gemini.env` file in the root directory:
+    ```env
+    GEMINI_API_KEY=your_api_key_here
+    ```
+
+4.  **Launch:**
+    ```bash
+    python main.py
+    ```
+
+---
+
+## 🎨 DESIGN SYSTEM
+
+*   **Typography:** [Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P)
+*   **Palette:** 
+    *   `#0a0a0a` (Deep Space)
+    *   `#facc15` (Cyber Yellow)
+    *   `#ff00ff` (Neon Magenta)
+    *   `#22d3ee` (Electric Cyan)
+    *   `#4ade80` (Arcade Green)
+
+---
+
+*Built for Grade 4 Scholars. Developed with Google DeepMind Advanced Agentic Coding.*

@@ -63,7 +63,8 @@ def fetch_gemini_words(level_name, min_len, max_len, count, excluded_words):
         return []
 
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Use full model path to avoid 404 on some API versions
+        model = genai.GenerativeModel('models/gemini-1.5-flash')
         
         system_instruction = (
             f"You are an offline spelling teacher. Output exactly {count} words. "

@@ -17,12 +17,13 @@ class KioskManager:
         )
         self.window.show()
 
-        #try:
-        #    keyboard.block_key('windows')
-        #    keyboard.block_key('alt')
-        #    keyboard.block_key('tab')
-        #except ImportError:
-        #    pass
+        try:
+            keyboard.block_key('windows')
+            keyboard.block_key('alt')
+            keyboard.block_key('tab')
+            keyboard.block_key('esc')
+        except Exception as e:
+            print(f"Keyboard hook error: {e}")
 
     def disable_kiosk_mode(self):
         """Unlocks the screen (For parents/debugging)."""

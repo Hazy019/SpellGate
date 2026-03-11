@@ -218,7 +218,7 @@ class MemorizationScene(BaseScene):
         hc_layout = QVBoxLayout(header_container)
         hc_layout.setContentsMargins(0, 0, 0, 0)
 
-        header = QLabel("SPELL BLASTER", self)
+        header = QLabel("SPELL GATE", self)
         header.setObjectName("Header")
         header.setFont(QFont(self.arcade_family, 32))
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -538,7 +538,7 @@ class RecallScene(BaseScene):
     def check_answer(self, index):
         user_text = self.inputs[index].text().strip().upper()
         if user_text == self.words[index].upper():
-            self.earned_seconds += 120 # +2 mins
+            self.earned_seconds += 300 # roadmap sync: +5 mins
             self.inputs[index].setEnabled(False)
             self.inputs[index].setStyleSheet("background-color: #113311; border: 3px solid #4ade80; color: #4ade80;")
             
@@ -585,7 +585,7 @@ class RecallScene(BaseScene):
                         self.inputs[i].setFocus()
                         break
         else:
-            self.earned_seconds = max(0, self.earned_seconds - 60) # -1 min
+            self.earned_seconds = max(0, self.earned_seconds - 300) # roadmap sync: -5 min
             
             widget = self.inputs[index]
             original_style = widget.styleSheet()

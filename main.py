@@ -1,11 +1,12 @@
 import sys
 import os
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QGraphicsDropShadowEffect
-from PyQt6.QtGui import QKeySequence, QShortcut, QFont, QColor, QFontDatabase
-from PyQt6.QtCore import Qt, QTimer, QPoint
+from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QPoint, QRect, QSequentialAnimationGroup, QPauseAnimation, QVariantAnimation, QAbstractAnimation
+from PyQt6.QtGui import QFont, QFontDatabase, QShortcut, QKeySequence, QIcon
 
 from modules.kiosk_manager import KioskManager
 from modules.ui_scenes import MemorizationScene, RecallScene, ScrambledPhase, SummaryScene
+from modules.loading_scene import LoadingScene
 
 class GlassyTimer(QWidget):
     def __init__(self):
@@ -74,7 +75,9 @@ class GlassyTimer(QWidget):
             self.timer.stop()
             self.label.setText("TIME UP")
             self.label.setStyleSheet("color: red;")
-            print("Executing Shutdown")
+            # Real shutdown trigger (Phase 2 hardening)
+            import os
+            os.system("shutdown /s /t 60")
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -96,7 +99,14 @@ class MainWindow(QMainWindow):
 
         self.showFullScreen()          # forces true fullscreen
         self.setContentsMargins(0,0,0,0)
+        self.setWindowIcon(QIcon("assets/icons/logo.png"))
 
+        self.show_loading_screen()
+
+    def show_loading_screen(self):
+        self.setCentralWidget(LoadingScene(self))
+
+    def start_game(self):
         self.show_memorization_phase()
 
     def show_memorization_phase(self):
