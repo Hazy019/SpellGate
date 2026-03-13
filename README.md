@@ -1,4 +1,4 @@
-# 🕹️ SPELLGATE: ARCADE KIOSK EDITION
+# SPELLGATE: ARCADE KIOSK EDITION
 
 **SPELLGATE** is a high-stakes educational kiosk that transforms screen time into a reward. Locked behind a neon-drenched retro aesthetic, users must prove their spelling mastery to earn every second of computer access.
 
@@ -7,7 +7,7 @@
 
 ---
 
-## 🚀 THE 3-PHASE CHALLENGE
+## THE 3-PHASE CHALLENGE
 
 1.  **PHASE 1: MEMORIZATION**
     *   Study 12 words curated by the **Google Gemini AI**.
@@ -24,7 +24,7 @@
 
 ---
 
-## 🛡️ KIOSK SECURITY & CONTROLS
+## KIOSK SECURITY & CONTROLS
 
 *   **HARD LOCK:** The application stay on top of all windows and suppresses the Windows Key, Alt+Tab, and Escape.
 *   **AUTO-SHUTDOWN:** If the Draggable Timer hits `00:00:00`, the system triggers an OS-level shutdown command (`shutdown /s /t 60`).
@@ -32,7 +32,7 @@
 
 ---
 
-## 📦 BUILDING THE EXECUTABLE (.EXE)
+## BUILDING THE EXECUTABLE (.EXE)
 
 To transform the Python source code into a standalone arcade executable:
 
@@ -52,7 +52,7 @@ To transform the Python source code into a standalone arcade executable:
 
 ---
 
-## 🛠️ INSTALLATION
+## INSTALLATION
 
 1.  **Clone & Navigate:**
     ```bash
@@ -78,7 +78,7 @@ To transform the Python source code into a standalone arcade executable:
 
 ---
 
-## 🎨 DESIGN SYSTEM
+## DESIGN SYSTEM
 
 *   **Typography:** [Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P)
 *   **Palette:** 
