@@ -32,3 +32,4 @@ SPELLGATE is a high-stakes educational kiosk application that locks system acces
 ## Development Credits
 
 Lead Developer: Kyrell Santillan
+
