@@ -1,4 +1,4 @@
-# 🕹️ SPELLGATE: Arcade Kiosk Edition
+# SPELLGATE: Arcade Kiosk Edition
 
 > **Transforming screen time into a hard-earned reward through AI-driven linguistic mastery.**
 
@@ -6,7 +6,7 @@ SPELLGATE is a high-stakes educational kiosk application that locks system acces
 
 ---
 
-## ⚠️ Kiosk Security & Control System
+## Kiosk Security & Control System
 
 This application is engineered for **Fullscreen Kiosk Mode**. It is designed to act as a system wrapper with the following security features:
 
@@ -16,7 +16,7 @@ This application is engineered for **Fullscreen Kiosk Mode**. It is designed to 
 
 ---
 
-## 🧠 The 3-Phase Challenge
+## The 3-Phase Challenge
 
 The core gameplay loop is designed to maximize retention through three distinct cognitive stages:
 
@@ -35,7 +35,7 @@ The core gameplay loop is designed to maximize retention through three distinct 
 
 ---
 
-## 🛠️ Technical Implementation
+## Technical Implementation
 
 ### **Prerequisites**
 * Python 3.x
