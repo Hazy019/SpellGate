@@ -1,4 +1,4 @@
-# 🕹️ SPELLGATE: Arcade Kiosk Edition
+# SPELLGATE: Arcade Kiosk Edition
 
 > **Transforming screen time into a hard-earned reward through AI-driven linguistic mastery.**
 
@@ -6,7 +6,7 @@ SPELLGATE is a high-stakes educational kiosk application that locks system acces
 
 ---
 
-## ⚠️ Kiosk Security & Control System
+## Kiosk Security & Control System
 
 * **Hard Lock:** Stays "Always on Top" and suppresses system hotkeys.
 * **Auto-Shutdown:** Executes an OS-level shutdown if the timer hits `00:00:00`.
@@ -14,7 +14,7 @@ SPELLGATE is a high-stakes educational kiosk application that locks system acces
 
 ---
 
-## 🛠️ Technical Implementation
+## Technical Implementation
 
 ### **Installation**
 
