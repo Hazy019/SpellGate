@@ -1,48 +1,52 @@
-# SPELLGATE: Arcade Kiosk Edition
+# 🕹️ SPELLGATE: Arcade Kiosk Edition
 
 > **Transforming screen time into a hard-earned reward through AI-driven linguistic mastery.**
 
-SPELLGATE is a high-stakes educational kiosk application that locks system access behind a neon-drenched retro interface. To earn computer playtime, users must prove their spelling proficiency through a rigorous, multi-phase challenge.
+SPELLGATE is a high-stakes educational kiosk application that locks system access behind a neon-drenched retro interface. 
 
 ---
 
-## Kiosk Security & Control System
+## ⚠️ Kiosk Security & Control System
 
-This application is engineered for **Fullscreen Kiosk Mode**. It is designed to act as a system wrapper with the following security features:
-
-* **Hard Lock:** Stays "Always on Top" and suppresses system hotkeys (`Windows Key`, `Alt+Tab`, `Esc`).
-* **Auto-Shutdown:** If the session timer reaches `00:00:00`, the application executes an OS-level shutdown command (`shutdown /s /t 60`).
-* **Parental Override:** Secure bypass available via `Ctrl + Shift + P` to exit the application and restore system control.
+* **Hard Lock:** Stays "Always on Top" and suppresses system hotkeys.
+* **Auto-Shutdown:** Executes an OS-level shutdown if the timer hits `00:00:00`.
+* **Parental Override:** Secure bypass via `Ctrl + Shift + P`.
 
 ---
 
-## The 3-Phase Challenge
-
-The core gameplay loop is designed to maximize retention through three distinct cognitive stages:
-
-### **Phase 1: Memorization**
-* **AI Curation:** 12 dynamic words generated via **Google Gemini AI**.
-* **Auditory Learning:** High-fidelity Text-to-Speech (TTS) for pronunciation mastery.
-* **Goal:** Commit the sequence to memory before the countdown expires.
-
-### **Phase 2: Sequential Recall**
-* **Precision Entry:** Users must type the full list in the exact order appeared.
-* **Time Economy:** Earn `+5 Minutes` per success; penalized `-5 Minutes` per error.
-
-### **Phase 3: Scrambled Fill-In**
-* **Pattern Recognition:** Solve complex "fill-in-the-blank" puzzles based on the mastered word list.
-* **Strategic Hints:** Hints are available but cost precious earned playtime.
-
----
-
-## Technical Implementation
-
-### **Prerequisites**
-* Python 3.x
-* Google Gemini API Key (for dynamic word generation)
+## 🛠️ Technical Implementation
 
 ### **Installation**
+
 1. **Clone the Repository:**
-   ```bash
    git clone [https://github.com/Hazy019/SpellGate.git](https://github.com/Hazy019/SpellGate.git)
-   cd SpellGate
+
+2. **Install Dependencies:**
+   pip install -r requirements.txt
+
+## 🎨 Design System
+
+* **Typography**	Press Start 2P
+* **Success/Safe**	#4ADE80 (Arcade Green)
+
+## 👨‍💻 Development Credits
+
+Lead Developer: Kyrell Santillan
+
+---
+
+### 🏆 Achievement Strategy (The "Speedrun" Plan)
+
+To fix the looks **and** level up your badges at the same time, follow these steps exactly:
+
+1.  **New Branch:** Instead of editing `main`, create a new branch called `fix/readme-styling`.
+2.  **The Co-Author Commit:** When you commit the change, click the **Description** box. Type your message, press **Enter twice**, and then add the co-author line: 
+    * `Co-authored-by: Name <email@example.com>`.
+3.  **Open the PR:** Create a Pull Request from your branch to `main`.
+4.  **The YOLO Merge:** Merge the PR immediately yourself.
+
+**Current Progress:**
+* **YOLO:** You have approximately **11 merged PRs**. Doing this will push you further toward the **x2 (Silver)** tier (which usually triggers at 10 or more merges).
+* **Pair Extraordinaire:** This will be your first official step toward the **x1 (Bronze)** or **x2 (Silver)** tier for collaborating.
+
+Once you merge this, check your profile tomorrow—GitHub usually takes **24–48 hours** to update the actual badge icons.
