@@ -1,93 +1,48 @@
-# SPELLGATE: ARCADE KIOSK EDITION
+# 🕹️ SPELLGATE: Arcade Kiosk Edition
 
-**SPELLGATE** is a high-stakes educational kiosk that transforms screen time into a reward. Locked behind a neon-drenched retro aesthetic, users must prove their spelling mastery to earn every second of computer access.
+> **Transforming screen time into a hard-earned reward through AI-driven linguistic mastery.**
 
-> [!IMPORTANT]
-> **SYSTEM LOCKED:** This application is designed to run in Fullscreen Kiosk Mode. It blocks system keys (Windows, Alt+Tab) to ensure the educational mission is completed.
-
----
-
-## THE 3-PHASE CHALLENGE
-
-1.  **PHASE 1: MEMORIZATION**
-    *   Study 12 words curated by the **Google Gemini AI**.
-    *   Listen to high-fidelity TTS pronunciations.
-    *   *Goal:* Commit the sequence to memory before the timer hits zero.
-
-2.  **PHASE 2: SEQUENTIAL RECALL**
-    *   Type all 12 words in the exact order they appeared.
-    *   **Economy:** `+5 Minutes` for every success | `-5 Minutes` for every error.
-
-3.  **PHASE 3: SCRAMBLED FILL-IN**
-    *   Solve C_t style puzzles for the mastered word list.
-    *   Use hints wisely—they cost precious playtime!
+SPELLGATE is a high-stakes educational kiosk application that locks system access behind a neon-drenched retro interface. To earn computer playtime, users must prove their spelling proficiency through a rigorous, multi-phase challenge.
 
 ---
 
-## KIOSK SECURITY & CONTROLS
+## ⚠️ Kiosk Security & Control System
 
-*   **HARD LOCK:** The application stay on top of all windows and suppresses the Windows Key, Alt+Tab, and Escape.
-*   **AUTO-SHUTDOWN:** If the Draggable Timer hits `00:00:00`, the system triggers an OS-level shutdown command (`shutdown /s /t 60`).
-*   **PARENT OVERRIDE:** Press `Ctrl + Shift + P` at any time to bypass the lock and exit the application.
+This application is engineered for **Fullscreen Kiosk Mode**. It is designed to act as a system wrapper with the following security features:
 
----
-
-## BUILDING THE EXECUTABLE (.EXE)
-
-To transform the Python source code into a standalone arcade executable:
-
-1.  **Install Build Tools:**
-    ```bash
-    pip install pyinstaller
-    ```
-
-2.  **Run the Build Script:**
-    We've provided an automated script that handles asset bundling and formatting:
-    ```bash
-    python package_app.py
-    ```
-
-3.  **Result:** 
-    Open the `dist` folder. You will find `SpellGate.exe` ready for kiosk deployment.
+* **Hard Lock:** Stays "Always on Top" and suppresses system hotkeys (`Windows Key`, `Alt+Tab`, `Esc`).
+* **Auto-Shutdown:** If the session timer reaches `00:00:00`, the application executes an OS-level shutdown command (`shutdown /s /t 60`).
+* **Parental Override:** Secure bypass available via `Ctrl + Shift + P` to exit the application and restore system control.
 
 ---
 
-## INSTALLATION
+## 🧠 The 3-Phase Challenge
 
-1.  **Clone & Navigate:**
-    ```bash
-    git clone https://github.com/yourusername/SpellGate.git
-    cd SpellGate
-    ```
+The core gameplay loop is designed to maximize retention through three distinct cognitive stages:
 
-2.  **Install Dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
+### **Phase 1: Memorization**
+* **AI Curation:** 12 dynamic words generated via **Google Gemini AI**.
+* **Auditory Learning:** High-fidelity Text-to-Speech (TTS) for pronunciation mastery.
+* **Goal:** Commit the sequence to memory before the countdown expires.
 
-3.  **Configure AI (Optional but Recommended):**
-    Create a `gemini.env` file in the root directory:
-    ```env
-    GEMINI_API_KEY=your_api_key_here
-    ```
+### **Phase 2: Sequential Recall**
+* **Precision Entry:** Users must type the full list in the exact order appeared.
+* **Time Economy:** Earn `+5 Minutes` per success; penalized `-5 Minutes` per error.
 
-4.  **Launch:**
-    ```bash
-    python main.py
-    ```
+### **Phase 3: Scrambled Fill-In**
+* **Pattern Recognition:** Solve complex "fill-in-the-blank" puzzles based on the mastered word list.
+* **Strategic Hints:** Hints are available but cost precious earned playtime.
 
 ---
 
-## DESIGN SYSTEM
+## 🛠️ Technical Implementation
 
-*   **Typography:** [Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P)
-*   **Palette:** 
-    *   `#0a0a0a` (Deep Space)
-    *   `#facc15` (Cyber Yellow)
-    *   `#ff00ff` (Neon Magenta)
-    *   `#22d3ee` (Electric Cyan)
-    *   `#4ade80` (Arcade Green)
+### **Prerequisites**
+* Python 3.x
+* Google Gemini API Key (for dynamic word generation)
 
----
-
-*Built for Grade 4 Scholars. Developed with Google DeepMind Advanced Agentic Coding.*
+### **Installation**
+1. **Clone the Repository:**
+   ```bash
+   git clone [https://github.com/Hazy019/SpellGate.git](https://github.com/Hazy019/SpellGate.git)
+   cd SpellGate
