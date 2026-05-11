@@ -50,5 +50,3 @@ To fix the looks **and** level up your badges at the same time, follow these ste
 * **Pair Extraordinaire:** This will be your first official step toward the **x1 (Bronze)** or **x2 (Silver)** tier for collaborating.
 
 Once you merge this, check your profile tomorrow—GitHub usually takes **24–48 hours** to update the actual badge icons.
-
-
