@@ -35,7 +35,7 @@ Lead Developer: Kyrell Santillan
 
 ---
 
-### 🏆 Achievement Strategy (The "Speedrun" Plan)
+### Achievement Strategy (The "Speedrun" Plan)
 
 To fix the looks **and** level up your badges at the same time, follow these steps exactly:
 
