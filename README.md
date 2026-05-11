@@ -24,7 +24,7 @@ SPELLGATE is a high-stakes educational kiosk application that locks system acces
 2. **Install Dependencies:**
    pip install -r requirements.txt
 
-## 🎨 Design System
+## Design System
 
 * **Typography**	Press Start 2P
 * **Success/Safe**	#4ADE80 (Arcade Green)
