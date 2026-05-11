@@ -29,7 +29,7 @@ SPELLGATE is a high-stakes educational kiosk application that locks system acces
 * **Typography**	Press Start 2P
 * **Success/Safe**	#4ADE80 (Arcade Green)
 
-## 👨‍💻 Development Credits
+## Development Credits
 
 Lead Developer: Kyrell Santillan
 
