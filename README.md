@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # SpellGate 🚀
 
 **SpellGate** is an educational lock-screen and kiosk application designed for children. It gamifies screen time management by requiring the user to master spelling words to "earn" computer playtime. Once time is earned, a floating timer sits on the desktop, gracefully shutting down the PC when time runs out.
@@ -52,10 +53,47 @@ SpellGate stores user progress and time bank balances in the local application d
 *   **Path**: `C:\Users\[Username]\AppData\Local\SpellGate`
 *   `user_progress.json` - Tracks mastered words and current difficulty level. Delete this to wipe the child's progress.
 *   `time_bank.txt` - Tracks the remaining seconds of playtime. You can manually edit this file to grant bonus time or penalize time.
+=======
+# SPELLGATE: Arcade Kiosk Edition
+
+> **Transforming screen time into a hard-earned reward through AI-driven linguistic mastery.**
+
+SPELLGATE is a high-stakes educational kiosk application that locks system access behind a neon-drenched retro interface. 
 
 ---
 
+## Kiosk Security & Control System
+
+* **Hard Lock:** Stays "Always on Top" and suppresses system hotkeys.
+* **Auto-Shutdown:** Executes an OS-level shutdown if the timer hits `00:00:00`.
+* **Parental Override:** Secure bypass via `Ctrl + Shift + P`.
+
+---
+
+## Technical Implementation
+
+### **Installation**
+>>>>>>> 5ab25e087646a817408f217e065b55eae6abb5ef
+
+1. **Clone the Repository:**
+   git clone [https://github.com/Hazy019/SpellGate.git](https://github.com/Hazy019/SpellGate.git)
+
+<<<<<<< HEAD
 ## ⚙️ Requirements (For Developers)
 *   Python 3.12+
 *   Windows 10 / 11
 *   A Google Gemini API Key placed in a `gemini.env` file (Optional, required only for dynamic sentence generation).
+=======
+2. **Install Dependencies:**
+   pip install -r requirements.txt
+
+## Design System
+
+* **Typography**	Press Start 2P
+* **Success/Safe**	#4ADE80 (Arcade Green)
+
+## Development Credits
+
+Lead Developer: Kyrell Santillan
+
+>>>>>>> 5ab25e087646a817408f217e065b55eae6abb5ef
