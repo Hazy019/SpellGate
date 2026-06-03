@@ -22,6 +22,7 @@ class KioskManager:
             keyboard.block_key('alt')
             keyboard.block_key('tab')
             keyboard.block_key('esc')
+            keyboard.block_key('f4')
         except Exception as e:
             print(f"Keyboard hook error: {e}")
 

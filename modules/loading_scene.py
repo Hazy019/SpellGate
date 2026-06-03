@@ -248,18 +248,34 @@ class LoadingScene(QWidget):
     def _setup_scanline(self):
         self._sl = QLabel(self)
         self._sl.setStyleSheet(
-            "background-color: rgba(34,211,238,16);"
-            "border-bottom: 2px solid rgba(34,211,238,55);")
+            "background-color: rgba(34,211,238,15);"
+            "border-bottom: 2px solid rgba(34,211,238,60);")
         self._sl.setFixedHeight(14)
         self._sl.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self._sl.raise_()
 
         self._sl_anim = QPropertyAnimation(self._sl, b"pos", self)
-        self._sl_anim.setDuration(3000)
+        self._sl_anim.setDuration(4000)
         self._sl_anim.setStartValue(QPoint(0, -20))
         self._sl_anim.setEndValue(QPoint(0, 1200))
         self._sl_anim.setLoopCount(-1)
         self._sl_anim.start()
+
+        # Adding a subtle full-screen flicker
+        self.flicker_overlay = QWidget(self)
+        self.flicker_overlay.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.flicker_overlay.setStyleSheet("background-color: rgba(255, 255, 255, 5);")
+        self.flicker_overlay.hide()
+        
+        self.flicker_timer = QTimer(self)
+        self.flicker_timer.timeout.connect(self._do_flicker)
+        self.flicker_timer.start(50)
+
+    def _do_flicker(self):
+        import random
+        if random.random() > 0.98:
+            self.flicker_overlay.show()
+            QTimer.singleShot(30, self.flicker_overlay.hide)
 
     # ──────────────────────────────────────────
     #  TIMERS
@@ -373,18 +389,23 @@ class LoadingScene(QWidget):
     def paintEvent(self, event):
         super().paintEvent(event)
         p   = QPainter(self)
-        pen = QPen(QColor(255, 255, 255, 5))
+        pen = QPen(QColor(255, 255, 255, 12))
         pen.setWidth(1); p.setPen(pen)
         for x in range(0, self.width(), 32):
             p.drawLine(x, 0, x, self.height())
         for y in range(0, self.height(), 32):
             p.drawLine(0, y, self.width(), y)
+        # Subtle darkened overlay
+        p.fillRect(self.rect(), QColor(0, 0, 0, 40))
+        p.end()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         if hasattr(self, '_sl'):
             self._sl.setFixedWidth(self.width())
             self._sl_anim.setEndValue(QPoint(0, self.height() + 20))
+        if hasattr(self, 'flicker_overlay'):
+            self.flicker_overlay.setGeometry(self.rect())
         if hasattr(self, '_ver'):
             self._ver.adjustSize()
             self._ver.move(

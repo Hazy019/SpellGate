@@ -2,12 +2,12 @@ import json
 import random
 from modules.audio import play_audio
 
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QGridLayout, 
-                             QPushButton, QGraphicsDropShadowEffect, QLineEdit)
-from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QPoint, QEasingCurve, QVariantAnimation
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QGridLayout,
+                             QPushButton, QGraphicsDropShadowEffect, QLineEdit, QFrame, QSizePolicy)
+from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QPoint, QEasingCurve, QVariantAnimation, QAbstractAnimation
 from PyQt6.QtGui import QFont, QColor, QFontDatabase, QPainter, QPen
-from PyQt6.QtWidgets import QFrame, QSizePolicy
-from modules.game_logic import generate_scrambled, update_mastery, get_next_words, save_progress
+from modules.game_logic import generate_scrambled, update_mastery, get_next_words, save_progress, load_progress
+from modules.config import TIME_BANK_FILE, USER_PROGRESS_FILE
 
 DARK_THEME = """
     QWidget { 
@@ -87,7 +87,6 @@ class SpeakingLineEdit(QLineEdit):
         self.anim = QVariantAnimation(self)
         self.anim.setDuration(800)
         self.anim.setStartValue(5)
-        self.anim.setStartValue(5)
         self.anim.setEndValue(25)
         self.anim.valueChanged.connect(lambda v: self.glow.setBlurRadius(v))
         self.anim.finished.connect(self.toggle_anim_direction)
@@ -126,18 +125,104 @@ class BaseScene(QWidget):
     def paintEvent(self, event):
         super().paintEvent(event)
         painter = QPainter(self)
-        grid_pen = QPen(QColor(255, 255, 255, 5)) 
+        # Dynamic static grid for that arcade look
+        grid_pen = QPen(QColor(255, 255, 255, 12)) 
         grid_pen.setWidth(1)
         painter.setPen(grid_pen)
         
+        # Draw vertical lines
         for x in range(0, self.width(), 32):
             painter.drawLine(x, 0, x, self.height())
             
+        # Draw horizontal lines
         for y in range(0, self.height(), 32):
             painter.drawLine(0, y, self.width(), y)
         
+        # Draw a subtle darkened gradient overlay
+        painter.fillRect(self.rect(), QColor(0, 0, 0, 40))
+        
     def apply_current_theme(self):
         self.setStyleSheet(DARK_THEME if self.is_dark else LIGHT_THEME)
+
+    def screen_shake(self, intensity=15):
+        """Violent screen shake for errors."""
+        anim = QPropertyAnimation(self, b"pos", self)
+        anim.setDuration(50)
+        curr = self.pos()
+        anim.setKeyValueAt(0, curr)
+        anim.setKeyValueAt(0.25, curr + QPoint(-intensity, intensity//2))
+        anim.setKeyValueAt(0.5, curr + QPoint(intensity, -intensity))
+        anim.setKeyValueAt(0.75, curr + QPoint(-intensity//2, intensity))
+        anim.setKeyValueAt(1, curr)
+        anim.setLoopCount(4)
+        anim.start()
+        self._shake_anim = anim
+
+    def combo_pulse(self):
+        """Rainbow pulse for high streaks."""
+        overlay = QWidget(self)
+        overlay.setGeometry(self.rect())
+        overlay.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        overlay.show()
+        
+        anim = QVariantAnimation(self)
+        anim.setDuration(600)
+        anim.setStartValue(0.3)
+        anim.setEndValue(0.0)
+        
+        colors = ["#ff00ff", "#22d3ee", "#facc15"]
+        import random
+        c = random.choice(colors)
+        
+        def set_op(v):
+            overlay.setStyleSheet(f"background-color: {c}; opacity: {v};")
+        
+        anim.valueChanged.connect(set_op)
+        anim.finished.connect(overlay.deleteLater)
+        anim.start()
+        self._pulse_anim = anim
+
+    def draw_spaceship(self, painter, rect, type="Interceptor", color="#22d3ee"):
+        """Draws a pixel-art style spaceship using primitives."""
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(color))
+        
+        cx, cy = rect.center().x(), rect.center().y()
+        w, h = rect.width(), rect.height()
+        
+        if type == "Interceptor": # 🚀 Shape
+            # Main body
+            painter.drawRect(cx-w//6, cy-h//3, w//3, h//2)
+            # Nose
+            painter.drawPolygon([QPoint(cx-w//6, cy-h//3), QPoint(cx+w//6, cy-h//3), QPoint(cx, cy-h//2)])
+            # Wings
+            painter.drawRect(cx-w//3, cy-h//6, w//6, h//4)
+            painter.drawRect(cx+w//6, cy-h//6, w//6, h//4)
+            # Engine glow
+            painter.setBrush(QColor("#ff00ff"))
+            painter.drawRect(cx-w//8, cy+h//6, w//4, h//8)
+            
+        elif type == "Guardian": # 🛸 Shape
+            # Saucer body
+            painter.drawEllipse(cx-w//2, cy-h//6, w, h//3)
+            # Dome
+            painter.setBrush(QColor("#4ade80"))
+            painter.drawEllipse(cx-w//4, cy-h//3, w//2, h//3)
+            # Lights
+            painter.setBrush(QColor("#ffffff"))
+            painter.drawEllipse(cx-w//3, cy, 4, 4)
+            painter.drawEllipse(cx, cy+4, 4, 4)
+            painter.drawEllipse(cx+w//3, cy, 4, 4)
+            
+        elif type == "Voyager": # 📡 Shape
+            # Dish
+            painter.drawChord(cx-w//2, cy-h//2, w, h, 0*16, 180*16)
+            # Base
+            painter.drawRect(cx-4, cy, 8, h//3)
+            # Signal bits
+            painter.setBrush(QColor("#facc15"))
+            painter.drawRect(cx-w//2, cy-h//2, 4, 4)
+            painter.drawRect(cx+w//2-4, cy-h//2, 4, 4)
 
     def create_theme_toggle(self, layout):
         self.toggle_btn = QPushButton("[DARK]" if self.is_dark else "[LITE]", self)
@@ -153,19 +238,70 @@ class BaseScene(QWidget):
         self.apply_current_theme()
 
     def setup_scanline(self):
+        # The main moving scanline
         self.scanline = QLabel(self)
-        self.scanline.setStyleSheet("background-color: rgba(34, 211, 238, 20); border-bottom: 2px solid rgba(34, 211, 238, 80);")
+        self.scanline.setStyleSheet("background-color: rgba(34, 211, 238, 15); border-bottom: 2px solid rgba(34, 211, 238, 60);")
         self.scanline.setFixedHeight(12)
         self.scanline.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.scanline.show()
         self.scanline.raise_()
 
         self.scan_anim = QPropertyAnimation(self.scanline, b"pos", self)
-        self.scan_anim.setDuration(3000)
+        self.scan_anim.setDuration(4000)
         self.scan_anim.setStartValue(QPoint(0, -20))
         self.scan_anim.setEndValue(QPoint(0, 1080))
         self.scan_anim.setLoopCount(-1)
         self.scan_anim.start()
+
+        # Adding a subtle full-screen flicker
+        self.flicker_overlay = QWidget(self)
+        self.flicker_overlay.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.flicker_overlay.setStyleSheet("background-color: rgba(255, 255, 255, 5);")
+        self.flicker_overlay.hide()
+        
+        self.flicker_timer = QTimer(self)
+        self.flicker_timer.timeout.connect(self._do_flicker)
+        self.flicker_timer.start(50)
+
+    def _do_flicker(self):
+        import random
+        if random.random() > 0.98:
+            self.flicker_overlay.show()
+            QTimer.singleShot(30, self.flicker_overlay.hide)
+
+    def show_score_popup(self, widget, text, color="#4ade80"):
+        """Floating score feedback."""
+        popup = QLabel(text, self)
+        popup.setFont(QFont(self.arcade_family, 14))
+        popup.setStyleSheet(f"color: {color}; background: transparent;")
+        
+        # Position relative to the widget
+        pos = widget.mapTo(self, QPoint(widget.width() // 2, 0))
+        popup.move(pos.x() - 20, pos.y())
+        popup.show()
+        
+        anim = QPropertyAnimation(popup, b"pos", self)
+        anim.setDuration(800)
+        anim.setStartValue(popup.pos())
+        anim.setEndValue(popup.pos() - QPoint(0, 100))
+        anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        
+        # Fade out effect
+        opacity_anim = QVariantAnimation(self)
+        opacity_anim.setDuration(800)
+        opacity_anim.setStartValue(1.0)
+        opacity_anim.setEndValue(0.0)
+        def set_op(v):
+            popup.setStyleSheet(f"color: {color}; background: transparent; opacity: {v};")
+        opacity_anim.valueChanged.connect(set_op)
+        
+        anim.finished.connect(popup.deleteLater)
+        anim.start()
+        opacity_anim.start()
+        
+        if not hasattr(self, '_anims'): self._anims = []
+        self._anims.append(anim)
+        self._anims.append(opacity_anim)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -173,6 +309,126 @@ class BaseScene(QWidget):
             self.scanline.setFixedWidth(self.width())
             if self.height() > 0:
                 self.scan_anim.setEndValue(QPoint(0, self.height() + 20))
+        if hasattr(self, 'flicker_overlay'):
+            self.flicker_overlay.setGeometry(self.rect())
+
+    def create_avatar_widget(self):
+        """Creates a small widget that displays the current hero."""
+        avatar_type = getattr(self.parent_window, 'current_avatar', 'Interceptor')
+        color = NEON_COLORS[0]
+        
+        class AvatarDisplay(QWidget):
+            def __init__(self, scene, atype):
+                super().__init__(scene)
+                self.scene = scene
+                self.atype = atype
+                self.setFixedSize(100, 100)
+                self.bob_val = 0
+                self.timer = QTimer(self)
+                self.timer.timeout.connect(self.update_bob)
+                self.timer.start(50)
+                
+            def update_bob(self):
+                import math
+                self.bob_val += 0.2
+                self.move(self.x(), self.y() + int(math.sin(self.bob_val) * 2))
+                self.update()
+                
+            def paintEvent(self, event):
+                painter = QPainter(self)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                self.scene.draw_spaceship(painter, self.rect().adjusted(10,10,-10,-10), self.atype)
+
+        return AvatarDisplay(self, avatar_type)
+
+    def wobble(self, widget):
+        """Standard arcade 'error' wobble."""
+        anim = QPropertyAnimation(widget, b"pos", widget)
+        anim.setDuration(50)
+        curr = widget.pos()
+        anim.setKeyValueAt(0, curr)
+        anim.setKeyValueAt(0.25, curr + QPoint(-15, 0))
+        anim.setKeyValueAt(0.75, curr + QPoint(15, 0))
+        anim.setKeyValueAt(1, curr)
+        anim.setLoopCount(3)
+        anim.start()
+        widget._wobble_anim = anim
+
+# --- NEW: AVATAR SELECTION ---
+class AvatarSelectionScene(BaseScene):
+    def __init__(self, parent_window):
+        super().__init__(parent_window)
+        self.initUI()
+        self.apply_current_theme()
+        self.setup_scanline()
+
+    def initUI(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(60, 40, 60, 40)
+        
+        header = QLabel("SELECT YOUR SPACESHIP", self)
+        header.setFont(QFont(self.arcade_family, 24))
+        header.setStyleSheet("color: #ff00ff; background: transparent;")
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(header)
+        
+        grid = QHBoxLayout()
+        grid.setSpacing(40)
+        
+        ships = [
+            ("Interceptor", "🚀 FAST", "#22d3ee"),
+            ("Guardian", "🛸 SAFE", "#4ade80"),
+            ("Voyager", "📡 SMART", "#facc15")
+        ]
+        
+        for name, desc, color in ships:
+            card = QWidget()
+            card.setFixedSize(220, 300)
+            card.setStyleSheet(f"border: 3px solid {color}; background: #000; border-radius: 10px;")
+            cl = QVBoxLayout(card)
+            
+            # Draw preview
+            class ShipPreview(QWidget):
+                def __init__(self, scene, stype, scolor):
+                    super().__init__()
+                    self.scene = scene
+                    self.stype = stype
+                    self.scolor = scolor
+                    self.setFixedSize(160, 160)
+                def paintEvent(self, event):
+                    p = QPainter(self)
+                    self.scene.draw_spaceship(p, self.rect().adjusted(10,10,-10,-10), self.stype, self.scolor)
+            
+            cl.addWidget(ShipPreview(self, name, color), alignment=Qt.AlignmentFlag.AlignCenter)
+            
+            n_lbl = QLabel(name.upper())
+            n_lbl.setFont(QFont(self.arcade_family, 14))
+            n_lbl.setStyleSheet(f"color: {color}; border: none;")
+            n_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            cl.addWidget(n_lbl)
+            
+            d_lbl = QLabel(desc)
+            d_lbl.setFont(QFont(self.arcade_family, 8))
+            d_lbl.setStyleSheet("color: #334155; border: none;")
+            d_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            cl.addWidget(d_lbl)
+            
+            btn = QPushButton("SELECT")
+            btn.setObjectName("ActionBtn")
+            btn.setFont(QFont(self.arcade_family, 10))
+            btn.setStyleSheet(f"border: 2px solid {color}; color: {color};")
+            btn.clicked.connect(lambda checked, n=name: self.select_ship(n))
+            cl.addWidget(btn)
+            
+            grid.addWidget(card)
+            
+        layout.addLayout(grid)
+        layout.addStretch()
+
+    def select_ship(self, name):
+        self.parent_window.current_avatar = name
+        play_audio(f"{name} online!")
+        self.parent_window.start_game()
 
 class MemorizationScene(BaseScene): 
     def __init__(self, parent_window):
@@ -184,13 +440,14 @@ class MemorizationScene(BaseScene):
         self.setup_scanline()
 
     def load_data(self):
-        try:
-            with open("data/user_progress.json", "r") as f:
-                self.progress_data = json.load(f)
-        except:
-            self.progress_data = {"mastered_words": [], "learning_pool": {}, "current_level": "Grade_4"}
-        
+        # BUG-02 FIX: use the config constant — always reads from LOCALAPPDATA
+        self.progress_data = load_progress(USER_PROGRESS_FILE)
+
         self.words = get_next_words(self.progress_data, "assets/words.csv", count=12)
+
+        # Save immediately after populating learning pool so new words persist
+        # even if the app crashes before reaching ScrambledPhase
+        save_progress(self.progress_data)
 
     def initUI(self):
         layout = QVBoxLayout(self)
@@ -199,6 +456,10 @@ class MemorizationScene(BaseScene):
 
         self.create_theme_toggle(layout) 
         
+        # Add Avatar in the corner
+        self.avatar = self.create_avatar_widget()
+        self.avatar.move(20, 80)
+        self.avatar.show()        
         hud_layout = QHBoxLayout()
         lives_lbl = QLabel("LIVES: ❤️❤️❤️", self)
         lives_lbl.setFont(QFont(self.arcade_family, 9))
@@ -302,8 +563,8 @@ class MemorizationScene(BaseScene):
         import math
         self.cards = []
         row, col = 0, 0
-        for i, word in enumerate(self.words):
-            card = self.create_word_card(word, i)
+        for i, word_data in enumerate(self.words):
+            card = self.create_word_card(word_data, i)
             # Center the row dynamically
             if i >= len(self.words) - (len(self.words) % 4) and len(self.words) % 4 != 0:
                 offset_col = col + math.floor((4 - (len(self.words) % 4)) / 2)
@@ -359,7 +620,10 @@ class MemorizationScene(BaseScene):
         
         QTimer.singleShot(100, self.animate_cards_in)
 
-    def create_word_card(self, word, index):
+    def create_word_card(self, word_data, index):
+        word = word_data["word"]
+        sentence = word_data["sentence"]
+        
         btn = QPushButton(f"👾\n{word}")
         btn.setObjectName("WordCard") 
         btn.setMinimumHeight(80)
@@ -372,7 +636,7 @@ class MemorizationScene(BaseScene):
         btn.setFont(QFont(self.arcade_family, 12))
         
         def on_click():
-            play_audio(word)
+            play_audio(f"{word}. {sentence}")
             btn.setStyleSheet(flash_style)
             QTimer.singleShot(150, lambda: btn.setStyleSheet(default_style))
             
@@ -410,6 +674,7 @@ class MemorizationScene(BaseScene):
 
     def finish_memorization(self):
         self.study_timer.stop()
+        # Extract just the words for the recall phase logic
         self.parent_window.start_recall_phase(self.words)
 
 # --- PHASE 2 ---
@@ -419,7 +684,9 @@ class RecallScene(BaseScene):
         self.words = words
         self.inputs = []
         self.attempts = [0] * len(words)
-        self.earned_seconds = 0 
+        self.earned_seconds = 0
+        self.combo_streak = 0
+        self.session_report = []   # BUG-04 FIX: was never initialized — caused AttributeError
         self.initUI()
         self.apply_current_theme()
         self.setup_scanline()
@@ -470,7 +737,8 @@ class RecallScene(BaseScene):
         
         row, col = 0, 0
         from PyQt6.QtWidgets import QSizePolicy
-        for i, word in enumerate(self.words):
+        for i, word_data in enumerate(self.words):
+            word = word_data["word"]
             cell = QWidget(self)
             cell.setStyleSheet("background: transparent;")
             cell_layout = QVBoxLayout(cell)
@@ -537,7 +805,8 @@ class RecallScene(BaseScene):
 
     def check_answer(self, index):
         user_text = self.inputs[index].text().strip().upper()
-        if user_text == self.words[index].upper():
+        correct_word = self.words[index]["word"].upper()
+        if user_text == correct_word:
             self.earned_seconds += 300 # roadmap sync: +5 mins
             self.inputs[index].setEnabled(False)
             self.inputs[index].setStyleSheet("background-color: #113311; border: 3px solid #4ade80; color: #4ade80;")
@@ -560,25 +829,19 @@ class RecallScene(BaseScene):
                 t_glow.setBlurRadius(8); t_glow.setColor(QColor("#4ade80")); t_glow.setOffset(0,0)
                 tick.setGraphicsEffect(t_glow)
             
-            popup = QLabel("+100", self)
-            popup.setFont(QFont(self.arcade_family, 12))
-            popup.setStyleSheet("color: #4ade80; background: transparent;")
-            popup.move(self.inputs[index].pos())
-            popup.show()
+            self.show_score_popup(self.inputs[index], "+100")
             
-            anim = QPropertyAnimation(popup, b"pos", self)
-            anim.setDuration(600)
-            anim.setStartValue(popup.pos())
-            anim.setEndValue(popup.pos() - QPoint(0, 80))
-            anim.finished.connect(popup.deleteLater)
-            anim.start()
+            self.combo_streak += 1
+            if self.combo_streak >= 3:
+                self.show_score_popup(self.inputs[index], f"COMBO x{self.combo_streak}!", "#ff00ff")
+                self.combo_pulse()
             
-            if not hasattr(self, '_anims'): self._anims = []
-            self._anims.append(anim)
-            
+            # Add to session report
+            self.session_report.append({"word": correct_word, "status": "MASTERED", "color": "#4ade80"})
+
             if all(not inp.isEnabled() for inp in self.inputs):
                 self.deposit_time(self.earned_seconds)
-                self.parent_window.start_scrambled_phase(self.words)
+                self.finish_recall()
             else:
                 for i in range(len(self.inputs)):
                     if self.inputs[i].isEnabled():
@@ -586,33 +849,30 @@ class RecallScene(BaseScene):
                         break
         else:
             self.earned_seconds = max(0, self.earned_seconds - 300) # roadmap sync: -5 min
+            self.combo_streak = 0
+            # Track failure in report
+            self.session_report.append({"word": self.words[index]["word"], "status": "RETRY", "color": "#facc15"})
             
             widget = self.inputs[index]
             original_style = widget.styleSheet()
             widget.setStyleSheet("border: 3px solid #ef4444; background-color: #2d0a0a; color: #ef4444;")
             QTimer.singleShot(400, lambda w=widget, s=original_style: w.setStyleSheet(s))
             
-            self.wobble_animation(widget)
+            self.wobble(widget)
+            self.screen_shake()
             play_audio("Try again")
 
-    def wobble_animation(self, widget):
-        anim = QPropertyAnimation(widget, b"pos", widget)
-        anim.setDuration(50)
-        curr = widget.pos()
-        anim.setKeyValueAt(0, curr)
-        anim.setKeyValueAt(0.25, curr + QPoint(-15, 0))
-        anim.setKeyValueAt(0.75, curr + QPoint(15, 0))
-        anim.setKeyValueAt(1, curr)
-        anim.setLoopCount(3)
-        anim.start()
-        widget._wobble_anim = anim 
+    def finish_recall(self):
+        self.parent_window.session_report = self.session_report # Pass report to main window
+        self.parent_window.start_scrambled_phase(self.words)
 
     def deposit_time(self, seconds):
+        # ISSUE-05 FIX: clamp to >= 0 (same as ScrambledPhase)
         try:
-            with open("data/time_bank.txt", "r") as f:
+            with open(TIME_BANK_FILE, "r") as f:
                 current = int(f.read().strip())
-            with open("data/time_bank.txt", "w") as f:
-                f.write(str(current + seconds))
+            with open(TIME_BANK_FILE, "w") as f:
+                f.write(str(max(0, current + seconds)))
         except:
             pass
 
@@ -624,9 +884,11 @@ class ScrambledPhase(BaseScene):
         random.shuffle(self.words)
         self.current_index = 0
         self.hints_used = 0
+        self.combo_streak = 0
+        self.session_report = getattr(parent_window, "session_report", []) # Maintain report history
         
         try:
-            with open("data/user_progress.json", "r") as f:
+            with open(USER_PROGRESS_FILE, "r") as f:
                 self.progress_data = json.load(f)
         except:
             self.progress_data = {"mastered_words": [], "learning_pool": {}, "current_level": "Grade_4"}
@@ -704,60 +966,79 @@ class ScrambledPhase(BaseScene):
         self.hints_used = 0
         if hasattr(self, 'hint_tokens'):
             self.hint_tokens.setText("HINTS: ●●●")
-        self.scrambled_word = generate_scrambled(self.words[self.current_index])
+        
+        word_data = self.words[self.current_index]
+        self.scrambled_word = generate_scrambled(word_data["word"])
         self.scrambled_display.setText(self.scrambled_word)
         self.progress_label.setText(f"WORD {self.current_index + 1} OF {len(self.words)}")
 
-        play_audio(f"Spell {self.words[self.current_index]}")
+        play_audio(f"Spell {word_data['word']}. {word_data['sentence']}")
 
     def submit_answer(self):
         answer = self.input_field.text().strip().upper()
-        correct_word = self.words[self.current_index].upper()
+        correct_word = self.words[self.current_index]["word"].upper()
 
         if answer == correct_word:
             reward = 300 - (self.hints_used * 60) 
             self.deposit_time(reward)
             update_mastery(correct_word, True, self.hints_used > 0, self.progress_data)
+            
+            self.combo_streak += 1
+            if self.combo_streak >= 2:
+                self.show_score_popup(self.input_field, f"COMBO x{self.combo_streak}!", "#ff00ff")
+                self.combo_pulse()
+
+            self.show_score_popup(self.input_field, f"+{reward}s", "#facc15")
             play_audio("Correct")
             self.next_word()
         else:
             self.deposit_time(-180) 
+            self.combo_streak = 0
             update_mastery(correct_word, False, False, self.progress_data)
             
             # Flash scrambled display
             self.scrambled_display.setStyleSheet("color: #ef4444; letter-spacing: 15px; background: transparent;")
             QTimer.singleShot(300, lambda: self.scrambled_display.setStyleSheet("color: #facc15; letter-spacing: 15px; background: transparent;"))
             
-            self.wobble_input()
+            self.wobble(self.input_field)
+            self.screen_shake()
             play_audio("Try again")
 
     def use_hint(self):
+        """
+        Progressive hint — each tap reveals one more letter.
+        Tap 1: first 2 chars revealed
+        Tap 2: first 3 chars revealed
+        Tap 3: first 4 chars (or full word if short) revealed
+        """
+        correct = self.words[self.current_index]["word"]
+        # Reveal progressively more characters with each hint
+        reveal_up_to = min(2 + self.hints_used, len(correct))
         self.hints_used += 1
-        correct = self.words[self.current_index]
-        self.scrambled_display.setText(correct[:2] + self.scrambled_word[2:])
-        dots = "●" * max(0, 3 - self.hints_used)
+
+        # Build the progressively revealed display
+        revealed = correct[:reveal_up_to]
+        remainder = self.scrambled_word[reveal_up_to:] if reveal_up_to < len(self.scrambled_word) else ""
+        self.scrambled_display.setText(revealed + remainder)
+
+        # Update hint tokens
+        max_hints = 3
+        remaining = max(0, max_hints - self.hints_used)
+        dots = "●" * remaining + "○" * self.hints_used
         self.hint_tokens.setText(f"HINTS: {dots}")
+
+        if self.hints_used >= max_hints:
+            self.hint_btn.setEnabled(False)
 
     def deposit_time(self, seconds):
         try:
-            with open("data/time_bank.txt", "r") as f:
+            with open(TIME_BANK_FILE, "r") as f:
                 current = int(f.read().strip())
-            with open("data/time_bank.txt", "w") as f:
+            with open(TIME_BANK_FILE, "w") as f:
                 f.write(str(max(0, current + seconds)))
         except:
             pass
 
-    def wobble_input(self):
-        anim = QPropertyAnimation(self.input_field, b"pos", self)
-        anim.setDuration(50)
-        curr = self.input_field.pos()
-        anim.setKeyValueAt(0, curr)
-        anim.setKeyValueAt(0.25, curr + QPoint(-15, 0))
-        anim.setKeyValueAt(0.75, curr + QPoint(15, 0))
-        anim.setKeyValueAt(1, curr)
-        anim.setLoopCount(3)
-        anim.start()
-        self._wobble_anim = anim
 
     def next_word(self):
         self.current_index += 1
@@ -780,10 +1061,42 @@ class SummaryScene(BaseScene):
 
     def read_final_time(self):
         try:
-            with open("data/time_bank.txt", "r") as f:
+            with open(TIME_BANK_FILE, "r") as f:
                 return int(f.read().strip())
         except:
             return 0
+
+    def create_report_table(self):
+        """Creates the Teacher's Report Card table."""
+        report = getattr(self.parent_window, 'session_report', [])
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setSpacing(5)
+        
+        header = QLabel("SESSION PERFORMANCE REPORT")
+        header.setFont(QFont(self.arcade_family, 8))
+        header.setStyleSheet("color: #334155; margin-top: 10px;")
+        layout.addWidget(header)
+        
+        for item in report:
+            row = QWidget()
+            row_l = QHBoxLayout(row)
+            row_l.setContentsMargins(0,2,0,2)
+            
+            w_lbl = QLabel(item["word"])
+            w_lbl.setFont(QFont(self.arcade_family, 8))
+            w_lbl.setStyleSheet("color: #FFFFFF; border: none;")
+            
+            s_lbl = QLabel(item["status"])
+            s_lbl.setFont(QFont(self.arcade_family, 7))
+            s_lbl.setStyleSheet(f"color: {item['color']}; border: none;")
+            
+            row_l.addWidget(w_lbl)
+            row_l.addStretch()
+            row_l.addWidget(s_lbl)
+            layout.addWidget(row)
+            
+        return container
 
     def initUI(self):
         layout = QVBoxLayout(self)
@@ -794,22 +1107,35 @@ class SummaryScene(BaseScene):
 
         # ── star burst ──────────────────────────────────────
         import random as _r
+        import math as _m
         def spawn_stars():
-            for _ in range(22):
+            for _ in range(35): # more stars!
                 star = QLabel(_r.choice(["*","+","✦","★"]), self)
-                star.setFont(QFont(self.arcade_family, _r.randint(10,20)))
+                star.setFont(QFont(self.arcade_family, _r.randint(10,24)))
                 star.setStyleSheet(f"color:{_r.choice(NEON_COLORS)};background:transparent;")
-                star.move(_r.randint(0,self.width()), _r.randint(0,self.height()))
+                
+                # Start at center
+                center = QPoint(self.width() // 2, self.height() // 2)
+                star.move(center)
                 star.show()
+                
                 anim = QPropertyAnimation(star, b"pos", self)
-                anim.setDuration(_r.randint(900,2000))
-                anim.setStartValue(star.pos())
-                anim.setEndValue(star.pos() - QPoint(0, 130))
+                anim.setDuration(_r.randint(1000,2500))
+                
+                # Random direction and distance
+                angle = _r.uniform(0, 2 * _m.pi)
+                dist  = _r.randint(200, 600)
+                end_x = int(center.x() + _m.cos(angle) * dist)
+                end_y = int(center.y() + _m.sin(angle) * dist)
+                
+                anim.setStartValue(center)
+                anim.setEndValue(QPoint(end_x, end_y))
                 anim.setEasingCurve(QEasingCurve.Type.OutCubic)
                 anim.finished.connect(star.deleteLater)
+                
                 if not hasattr(self,'_star_anims'): self._star_anims=[]
                 self._star_anims.append(anim)
-                QTimer.singleShot(_r.randint(0,1000), anim.start)
+                QTimer.singleShot(_r.randint(0,800), anim.start)
         QTimer.singleShot(250, spawn_stars)
 
         # ── MISSION COMPLETE title ───────────────────────────
@@ -930,6 +1256,11 @@ class SummaryScene(BaseScene):
         row_layout.setStretch(0, 1)   # time_box gets 1 part
         row_layout.setStretch(1, 2)   # stats_widget gets 2 parts
         tp_outer.addWidget(row_widget)
+        
+        # --- NEW: REPORT CARD ---
+        report_widget = self.create_report_table()
+        tp_outer.addWidget(report_widget)
+        
         layout.addWidget(timer_panel)
 
         # ── Hearts ───────────────────────────────────────────
