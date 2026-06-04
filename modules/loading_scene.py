@@ -71,7 +71,7 @@ class LoadingScene(QWidget):
     GAP_SS  = 14    # px  GATE → slogan gap
     GAP_SL  = 32    # px  slogan → loading section gap
     BAR_SP  = 14    # px  spacing inside bar wrapper
-    LOG_H   = 155   # px  boot-log box height
+    LOG_H   = 195   # px  boot-log box height (increased for 11pt font)
     BOT_PAD = 28    # px  bottom breathing room
 
     def __init__(self, parent_window):
@@ -184,14 +184,14 @@ class LoadingScene(QWidget):
         self._log.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._log.setStyleSheet("""
             QTextEdit {
-                background-color: #000000;
-                border: 2px solid rgba(34,211,238,0.20);
+                background-color: #020d0d;
+                border: 2px solid rgba(34,211,238,0.35);
                 border-radius: 0px;
                 color: #22d3ee;
-                padding: 12px 16px;
+                padding: 18px 28px;
             }
         """)
-        self._log.setFont(QFont(self.arcade, 9))
+        self._log.setFont(QFont(self.arcade, 11))
         wl.addWidget(self._log)
 
         root.addWidget(wrap)

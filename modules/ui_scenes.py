@@ -73,6 +73,11 @@ NEON_COLORS = ["#22d3ee", "#ff00ff", "#facc15", "#4ade80"]
 
 class SpeakingLineEdit(QLineEdit):
     """A custom text box that tells the user what word to spell and auto-capitalizes."""
+
+    # Class-level flag: when True, focusInEvent will NOT auto-play the word.
+    # Set to True before a replay button click, False after audio finishes.
+    _audio_locked: bool = False
+
     def __init__(self, word, parent=None):
         super().__init__(parent)
         self.target_word = word
@@ -105,7 +110,11 @@ class SpeakingLineEdit(QLineEdit):
 
     def focusInEvent(self, event):
         super().focusInEvent(event)
-        play_audio(f"Spell {self.target_word}")
+        # Only auto-announce if audio is NOT currently locked by a replay button.
+        # This prevents focusInEvent from triggering when clicking 🔊 HEAR WORD
+        # shifts focus to a neighboring input field.
+        if not SpeakingLineEdit._audio_locked:
+            play_audio(f"Spell {self.target_word}")
         self.anim.start()
 
     def focusOutEvent(self, event):
@@ -365,15 +374,17 @@ class AvatarSelectionScene(BaseScene):
     def initUI(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(60, 40, 60, 40)
-        
+        layout.addStretch()
         header = QLabel("SELECT YOUR SPACESHIP", self)
-        header.setFont(QFont(self.arcade_family, 24))
+        header.setFont(QFont(self.arcade_family, 32))
         header.setStyleSheet("color: #ff00ff; background: transparent;")
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(header)
         
+        layout.addSpacing(60)
+        
         grid = QHBoxLayout()
-        grid.setSpacing(40)
+        grid.setSpacing(60)
         
         ships = [
             ("Interceptor", "🚀 FAST", "#22d3ee"),
@@ -383,7 +394,7 @@ class AvatarSelectionScene(BaseScene):
         
         for name, desc, color in ships:
             card = QWidget()
-            card.setFixedSize(220, 300)
+            card.setFixedSize(280, 380)
             card.setStyleSheet(f"border: 3px solid {color}; background: #000; border-radius: 10px;")
             cl = QVBoxLayout(card)
             
@@ -394,7 +405,7 @@ class AvatarSelectionScene(BaseScene):
                     self.scene = scene
                     self.stype = stype
                     self.scolor = scolor
-                    self.setFixedSize(160, 160)
+                    self.setFixedSize(200, 200)
                 def paintEvent(self, event):
                     p = QPainter(self)
                     self.scene.draw_spaceship(p, self.rect().adjusted(10,10,-10,-10), self.stype, self.scolor)
@@ -402,21 +413,26 @@ class AvatarSelectionScene(BaseScene):
             cl.addWidget(ShipPreview(self, name, color), alignment=Qt.AlignmentFlag.AlignCenter)
             
             n_lbl = QLabel(name.upper())
-            n_lbl.setFont(QFont(self.arcade_family, 14))
+            n_lbl.setFont(QFont(self.arcade_family, 18))
             n_lbl.setStyleSheet(f"color: {color}; border: none;")
             n_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             cl.addWidget(n_lbl)
             
             d_lbl = QLabel(desc)
-            d_lbl.setFont(QFont(self.arcade_family, 8))
+            d_lbl.setFont(QFont(self.arcade_family, 10))
             d_lbl.setStyleSheet("color: #334155; border: none;")
             d_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             cl.addWidget(d_lbl)
             
             btn = QPushButton("SELECT")
             btn.setObjectName("ActionBtn")
-            btn.setFont(QFont(self.arcade_family, 10))
-            btn.setStyleSheet(f"border: 2px solid {color}; color: {color};")
+            btn.setFont(QFont(self.arcade_family, 14))
+            btn.setFixedHeight(45)
+            btn.setStyleSheet(
+                f"border: 2px solid {color}; color: {color};"
+                "background-color: #0a0a0a;"
+                "letter-spacing: 3px;"
+            )
             btn.clicked.connect(lambda checked, n=name: self.select_ship(n))
             cl.addWidget(btn)
             
@@ -430,36 +446,117 @@ class AvatarSelectionScene(BaseScene):
         play_audio(f"{name} online!")
         self.parent_window.start_game()
 
+from PyQt6.QtCore import QThread, pyqtSignal
+
+class WordLoaderThread(QThread):
+    words_loaded = pyqtSignal(list)
+    def __init__(self, progress_data, filepath, count):
+        super().__init__()
+        self.progress_data = progress_data
+        self.filepath = filepath
+        self.count = count
+
+    def run(self):
+        from modules.game_logic import get_next_words
+        words = get_next_words(self.progress_data, self.filepath, count=self.count)
+        self.words_loaded.emit(words)
+
 class MemorizationScene(BaseScene): 
     def __init__(self, parent_window):
         super().__init__(parent_window)
         self.time_left = 300
-        self.load_data()
-        self.initUI()
+        self.words = []
+        self.main_layout = QVBoxLayout(self)
+        
+        self.progress_data = load_progress(USER_PROGRESS_FILE)
+        
+        self.initLoadingUI()
         self.apply_current_theme()
         self.setup_scanline()
 
-    def load_data(self):
-        # BUG-02 FIX: use the config constant — always reads from LOCALAPPDATA
-        self.progress_data = load_progress(USER_PROGRESS_FILE)
+        self.loader_thread = WordLoaderThread(self.progress_data, "assets/words.csv", 12)
+        self.loader_thread.words_loaded.connect(self.on_words_loaded)
+        self.loader_thread.start()
 
-        self.words = get_next_words(self.progress_data, "assets/words.csv", count=12)
+    def initLoadingUI(self):
+        self.loading_container = QWidget(self)
+        l = QVBoxLayout(self.loading_container)
+        self.loading_lbl = QLabel("CONNECTING TO AI CORE...\nGENERATING WORDS", self)
+        self.loading_lbl.setFont(QFont(self.arcade_family, 24))
+        self.loading_lbl.setStyleSheet("color: #22d3ee; background: transparent; letter-spacing: 2px;")
+        self.loading_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        l.addWidget(self.loading_lbl)
+        
+        self.main_layout.addWidget(self.loading_container, alignment=Qt.AlignmentFlag.AlignCenter)
+        
+        self._blink_state = True
+        self.blink_timer = QTimer(self)
+        self.blink_timer.timeout.connect(self._blink_loading)
+        self.blink_timer.start(500)
 
-        # Save immediately after populating learning pool so new words persist
-        # even if the app crashes before reaching ScrambledPhase
+    def _blink_loading(self):
+        self._blink_state = not self._blink_state
+        op = "1.0" if self._blink_state else "0.0"
+        self.loading_lbl.setStyleSheet(f"color: #22d3ee; background: transparent; opacity: {op}; letter-spacing: 2px;")
+
+    def on_words_loaded(self, words):
+        self.words = words
         save_progress(self.progress_data)
+        self.blink_timer.stop()
+        self.loading_container.hide()
+        self.loading_container.deleteLater()
+        self.initUI()
+        self.apply_current_theme()
+        
+        # Start game timers here so they don't run during loading
+        self.study_timer = QTimer(self)
+        self.study_timer.timeout.connect(self.update_timer)
+        self.study_timer.start(1000)
+        QTimer.singleShot(100, self.animate_cards_in)
+
+        # Poll done_callbacks from audio.py every 100 ms — safe Qt main-thread dispatch
+        from modules.audio import done_callbacks as _dcb
+        self._done_callbacks = _dcb
+        self._cb_poller = QTimer(self)
+        self._cb_poller.timeout.connect(self._flush_audio_callbacks)
+        self._cb_poller.start(100)
+
+    def _flush_audio_callbacks(self):
+        """Drain audio done_callbacks and execute them on the main thread."""
+        try:
+            while True:
+                cb = self._done_callbacks.get_nowait()
+                try:
+                    cb()
+                except Exception:
+                    pass
+                self._done_callbacks.task_done()
+        except Exception:
+            pass  # queue.Empty — nothing to do
+
+    def _lock_cards(self, active_card, active_color):
+        """Dim all cards and mark the active one as playing."""
+        for card in self.cards:
+            card.setEnabled(False)
+        # Give visual feedback on which card is speaking
+        active_card.setStyleSheet(
+            f"QPushButton#WordCard {{ border: 3px solid {active_color};"
+            f" background-color: #1a1000; color: #facc15; padding: 15px; border-radius: 4px; }}"
+        )
+
+    def _unlock_cards(self, card_styles):
+        """Re-enable all cards and restore their original styles."""
+        for card, style in zip(self.cards, card_styles):
+            card.setEnabled(True)
+            card.setStyleSheet(style)
 
     def initUI(self):
-        layout = QVBoxLayout(self)
+        layout = self.main_layout
         layout.setSpacing(12)
         layout.setContentsMargins(40, 16, 40, 24)
 
         self.create_theme_toggle(layout) 
         
-        # Add Avatar in the corner
-        self.avatar = self.create_avatar_widget()
-        self.avatar.move(20, 80)
-        self.avatar.show()        
         hud_layout = QHBoxLayout()
         lives_lbl = QLabel("LIVES: ❤️❤️❤️", self)
         lives_lbl.setFont(QFont(self.arcade_family, 9))
@@ -474,18 +571,26 @@ class MemorizationScene(BaseScene):
         hud_layout.addWidget(score_lbl)
         layout.addLayout(hud_layout)
         
-        header_container = QWidget(self)
-        header_container.setStyleSheet("border: 2px solid #ff00ff; background: transparent; padding: 4px;")
-        hc_layout = QVBoxLayout(header_container)
+        self.header_container = QWidget(self)
+        self.header_container.setStyleSheet("border: 2px solid #ff00ff; background: rgba(255, 0, 255, 20); padding: 4px;")
+        self.header_container.setFixedHeight(70)
+        
+        self.avatar = self.create_avatar_widget()
+        self.avatar.setParent(self.header_container)
+        self.avatar.setFixedSize(60, 60)
+        self.avatar.move(10, 5)
+        self.avatar.show()
+
+        hc_layout = QVBoxLayout(self.header_container)
         hc_layout.setContentsMargins(0, 0, 0, 0)
 
-        header = QLabel("SPELL GATE", self)
+        header = QLabel("SPELL GATE", self.header_container)
         header.setObjectName("Header")
         header.setFont(QFont(self.arcade_family, 32))
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         hc_layout.addWidget(header)
         
-        layout.addWidget(header_container)
+        layout.addWidget(self.header_container)
         
         subtitle = QLabel("INSERT COIN TO CONTINUE", self)
         subtitle.setFont(QFont(self.arcade_family, 9))
@@ -542,18 +647,7 @@ class MemorizationScene(BaseScene):
         self.timer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         tc_layout.addWidget(self.timer_label)
 
-        self.progress_blocks_widget = QWidget(self.timer_container)
-        self.progress_blocks_widget.setStyleSheet("border: none;")
-        pb_layout = QHBoxLayout(self.progress_blocks_widget)
-        pb_layout.setSpacing(5)
-        self.progress_blocks = []
-        for i in range(10):
-            block = QWidget()
-            block.setFixedSize(20, 20)
-            block.setStyleSheet("background-color: #4ade80;") # Green
-            pb_layout.addWidget(block)
-            self.progress_blocks.append(block)
-        tc_layout.addWidget(self.progress_blocks_widget, alignment=Qt.AlignmentFlag.AlignCenter)
+
         
         layout.addWidget(self.timer_container, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -614,38 +708,56 @@ class MemorizationScene(BaseScene):
 
         layout.addWidget(self.ready_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        self.study_timer = QTimer(self)
-        self.study_timer.timeout.connect(self.update_timer)
-        self.study_timer.start(1000)
-        
-        QTimer.singleShot(100, self.animate_cards_in)
+
 
     def create_word_card(self, word_data, index):
         word = word_data["word"]
         sentence = word_data["sentence"]
         
+        color = NEON_COLORS[index % 4]
+        default_style = (
+            f"QPushButton#WordCard {{ border: 3px solid {color};"
+            f" background-color: #000000; color: #FFFFFF; padding: 15px; border-radius: 4px; }}"
+        )
+        playing_style = (
+            f"QPushButton#WordCard {{ border: 3px solid {color};"
+            f" background-color: #1a1000; color: #facc15; padding: 15px; border-radius: 4px; }}"
+        )
+
         btn = QPushButton(f"👾\n{word}")
-        btn.setObjectName("WordCard") 
+        btn.setObjectName("WordCard")
         btn.setMinimumHeight(80)
+        btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)  # Never steal focus from input fields
         btn.setSizePolicy(QPushButton.sizePolicy(btn).horizontalPolicy().Expanding,
                           QPushButton.sizePolicy(btn).verticalPolicy().Fixed)
-        color = NEON_COLORS[index % 4]
-        default_style = f"QPushButton#WordCard {{ border: 3px solid {color}; background-color: #000000; color: #FFFFFF; padding: 15px; border-radius: 4px; }}"
-        flash_style = f"QPushButton#WordCard {{ border: 3px solid {color}; background-color: #ffffff18; color: #FFFFFF; padding: 15px; border-radius: 4px; }}"
         btn.setStyleSheet(default_style)
         btn.setFont(QFont(self.arcade_family, 12))
-        
-        def on_click():
-            play_audio(f"{word}. {sentence}")
-            btn.setStyleSheet(flash_style)
-            QTimer.singleShot(150, lambda: btn.setStyleSheet(default_style))
-            
-        btn.clicked.connect(on_click)
+
         glow = QGraphicsDropShadowEffect(btn)
         glow.setBlurRadius(15)
         glow.setColor(QColor(color))
         glow.setOffset(0, 0)
         btn.setGraphicsEffect(glow)
+
+        def on_click(_checked=False, w=word, s=sentence, b=btn, c=color):
+            # NOTE: _checked absorbs the bool Qt sends with clicked() — DO NOT remove it!
+            # Snapshot current styles of all cards for restoration
+            card_styles = [card.styleSheet() for card in self.cards]
+            # Lock all cards immediately
+            self._lock_cards(b, c)
+            # Brief flash on the clicked card
+            b.setStyleSheet(
+                f"QPushButton#WordCard {{ border: 3px solid {c};"
+                f" background-color: #ffffff18; color: #FFFFFF; padding: 15px; border-radius: 4px; }}"
+            )
+            QTimer.singleShot(120, lambda: self._lock_cards(b, c))
+            # Play audio — unlock all cards via on_done callback
+            play_audio(
+                f"{w}. <PAUSE> {s}",
+                on_done=lambda: self._unlock_cards(card_styles)
+            )
+
+        btn.clicked.connect(on_click)
         return btn
 
     def animate_cards_in(self):
@@ -666,9 +778,13 @@ class MemorizationScene(BaseScene):
             self.time_left -= 1
             mins, secs = divmod(self.time_left, 60)
             self.timer_label.setText(f"{mins:02d}:{secs:02d}")
-            blocks_to_show = int(self.time_left / 30)
-            for i in range(10):
-                self.progress_blocks[i].setVisible(i < blocks_to_show)
+            
+            # Spaceship progress bar
+            progress_ratio = 1.0 - (self.time_left / 300.0)
+            max_x = self.header_container.width() - self.avatar.width() - 10
+            if max_x > 0:
+                new_x = 10 + int(progress_ratio * max_x)
+                self.avatar.move(new_x, self.avatar.y())
         else:
             self.finish_memorization()
 
@@ -683,6 +799,7 @@ class RecallScene(BaseScene):
         super().__init__(parent_window)
         self.words = words
         self.inputs = []
+        self.replay_buttons = []   # all 🔊 HEAR WORD buttons — locked together
         self.attempts = [0] * len(words)
         self.earned_seconds = 0
         self.combo_streak = 0
@@ -690,6 +807,81 @@ class RecallScene(BaseScene):
         self.initUI()
         self.apply_current_theme()
         self.setup_scanline()
+
+        # Poll done_callbacks from audio.py every 100 ms — safe Qt main-thread dispatch
+        from modules.audio import done_callbacks as _dcb
+        self._done_callbacks = _dcb
+        self._cb_poller = QTimer(self)
+        self._cb_poller.timeout.connect(self._flush_audio_callbacks)
+        self._cb_poller.start(100)
+
+    def _flush_audio_callbacks(self):
+        """Drain audio done_callbacks and execute them on the main thread."""
+        try:
+            while True:
+                cb = self._done_callbacks.get_nowait()
+                try:
+                    cb()
+                except Exception:
+                    pass
+                self._done_callbacks.task_done()
+        except Exception:
+            pass  # queue.Empty — nothing to do
+
+    def _lock_replay_buttons(self, active_btn, original_text, active_color):
+        """Disable all replay buttons, suppress focusInEvent speech, show playing indicator."""
+        SpeakingLineEdit._audio_locked = True   # ← suppress wrong-word announcements
+        for btn in self.replay_buttons:
+            btn.setEnabled(False)
+            btn.setStyleSheet(
+                btn.styleSheet().replace("background-color: #0a0a0a", "background-color: #050505")
+            )
+        # Highlight the one currently playing
+        active_btn.setText("⏳  PLAYING...")
+        active_btn.setStyleSheet(
+            f"border: 1px solid {active_color}; color: {active_color};"
+            "background-color: #1a1000; letter-spacing: 2px; margin-top: 2px;"
+        )
+
+    def _unlock_replay_buttons(self, btn_snapshot):
+        """Re-enable all replay buttons and restore focusInEvent speech."""
+        SpeakingLineEdit._audio_locked = False  # ← re-enable auto-announce on focus
+        for btn, (bcolor, btext) in zip(self.replay_buttons, btn_snapshot):
+            btn.setEnabled(True)
+            btn.setText(btext)
+            btn.setStyleSheet(
+                f"border: 1px solid {bcolor}; color: {bcolor};"
+                "background-color: #0a0a0a; letter-spacing: 2px; margin-top: 2px;"
+            )
+
+    def _on_replay_clicked(self, active_btn, word, sentence, active_color):
+        """
+        Called when a 🔊 HEAR WORD button is clicked.
+        - Captures the current label of every replay button.
+        - Locks all buttons immediately.
+        - Plays the word audio with an on_done callback.
+        - on_done fires on the Qt main thread (via the poller) to unlock all.
+        """
+        # Snapshot of (color, current text) for every button so we can restore them
+        btn_snapshot = []
+        for btn in self.replay_buttons:
+            ss = btn.styleSheet()
+            # Pull color out of the stylesheet: "border: 1px solid #xxxx; color: #xxxx;"
+            try:
+                bcolor = ss.split("color: ")[1].split(";")[0].strip()
+            except Exception:
+                bcolor = active_color
+            btn_snapshot.append((bcolor, btn.text()))
+
+        # Lock everything
+        self._lock_replay_buttons(active_btn, "🔊  HEAR WORD", active_color)
+
+        # Play with on_done that unlocks on completion
+        play_audio(
+            f"{word}. <PAUSE> {sentence}",
+            on_done=lambda: self._unlock_replay_buttons(btn_snapshot)
+        )
+
 
     def initUI(self):
         layout = QVBoxLayout(self)
@@ -765,6 +957,18 @@ class RecallScene(BaseScene):
             input_field.returnPressed.connect(lambda idx=i: self.check_answer(idx))
             cell_layout.addWidget(input_field)
 
+            # 🔊 Voice replay button — NoFocus so it NEVER steals focus from inputs
+            replay_btn = QPushButton("🔊  HEAR WORD")
+            replay_btn.setFont(QFont(self.arcade_family, 7))
+            replay_btn.setFixedHeight(28)
+            replay_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)  # KEY FIX: prevents focus-stealing
+            replay_btn.setStyleSheet(
+                f"border: 1px solid {color}; color: {color};"
+                "background-color: #0a0a0a; letter-spacing: 2px; margin-top: 2px;"
+            )
+            self.replay_buttons.append(replay_btn)
+            cell_layout.addWidget(replay_btn)
+
             # progress tick
             tick = QWidget(self)
             tick.setFixedHeight(4)
@@ -778,6 +982,15 @@ class RecallScene(BaseScene):
             if col > 3:
                 col = 0
                 row += 1
+
+        # Wire up replay buttons NOW that self.replay_buttons is fully populated
+        for btn, word_data in zip(self.replay_buttons, self.words):
+            w = word_data["word"]
+            sentence = word_data.get("sentence", "")
+            btn_color = btn.styleSheet().split("color: ")[1].split(";")[0].strip()
+            btn.clicked.connect(
+                lambda _, b=btn, ww=w, ss=sentence, bc=btn_color: self._on_replay_clicked(b, ww, ss, bc)
+            )
         
         grid_layout.setSpacing(18)
         grid_layout.setContentsMargins(0, 0, 0, 0)
@@ -834,7 +1047,7 @@ class RecallScene(BaseScene):
             self.combo_streak += 1
             if self.combo_streak >= 3:
                 self.show_score_popup(self.inputs[index], f"COMBO x{self.combo_streak}!", "#ff00ff")
-                self.combo_pulse()
+                # Removed combo_pulse flash as requested
             
             # Add to session report
             self.session_report.append({"word": correct_word, "status": "MASTERED", "color": "#4ade80"})
@@ -944,6 +1157,10 @@ class ScrambledPhase(BaseScene):
         self.hint_tokens.setStyleSheet("color: #facc15; background: transparent;")
         self.layout.addWidget(self.hint_tokens, alignment=Qt.AlignmentFlag.AlignCenter)
 
+        action_layout = QHBoxLayout()
+        action_layout.setSpacing(20)
+        action_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
         self.hint_btn = QPushButton("[H] HINT  -1 MIN", self)
         self.hint_btn.setObjectName("ActionBtn")
         self.hint_btn.setFont(QFont(self.arcade_family, 8))
@@ -953,17 +1170,34 @@ class ScrambledPhase(BaseScene):
         hb_glow.setColor(QColor("#facc15"))
         hb_glow.setOffset(4, 4)
         self.hint_btn.setGraphicsEffect(hb_glow)
-
         self.hint_btn.clicked.connect(self.use_hint)
-        self.layout.addWidget(self.hint_btn, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.sound_btn = QPushButton("🔊 REPLAY AUDIO", self)
+        self.sound_btn.setObjectName("ActionBtn")
+        self.sound_btn.setFont(QFont(self.arcade_family, 8))
+        
+        sb_glow = QGraphicsDropShadowEffect(self.sound_btn)
+        sb_glow.setBlurRadius(0)
+        sb_glow.setColor(QColor("#22d3ee"))
+        sb_glow.setOffset(4, 4)
+        self.sound_btn.setGraphicsEffect(sb_glow)
+        self.sound_btn.clicked.connect(self.replay_audio)
+        
+        action_layout.addWidget(self.hint_btn)
+        action_layout.addWidget(self.sound_btn)
+        
+        self.layout.addLayout(action_layout)
         self.layout.addStretch(1)   # push content up from bottom
 
         self.load_word()
 
     def load_word(self):
         self.input_field.clear()
+        self.input_field.setEnabled(True)
+        self.input_field.setStyleSheet("background-color: #000000; border: 3px solid #ff00ff; color: #ff00ff; max-width: 400px;")
         self.input_field.setFocus()
         self.hints_used = 0
+        self.incorrect_tries = 0
         if hasattr(self, 'hint_tokens'):
             self.hint_tokens.setText("HINTS: ●●●")
         
@@ -972,7 +1206,11 @@ class ScrambledPhase(BaseScene):
         self.scrambled_display.setText(self.scrambled_word)
         self.progress_label.setText(f"WORD {self.current_index + 1} OF {len(self.words)}")
 
-        play_audio(f"Spell {word_data['word']}. {word_data['sentence']}")
+        play_audio(f"Spell {word_data['word']}. <PAUSE> {word_data['sentence']}")
+
+    def replay_audio(self):
+        word_data = self.words[self.current_index]
+        play_audio(f"Spell {word_data['word']}. <PAUSE> {word_data['sentence']}")
 
     def submit_answer(self):
         answer = self.input_field.text().strip().upper()
@@ -986,7 +1224,7 @@ class ScrambledPhase(BaseScene):
             self.combo_streak += 1
             if self.combo_streak >= 2:
                 self.show_score_popup(self.input_field, f"COMBO x{self.combo_streak}!", "#ff00ff")
-                self.combo_pulse()
+                # Removed combo_pulse flash as requested
 
             self.show_score_popup(self.input_field, f"+{reward}s", "#facc15")
             play_audio("Correct")
@@ -996,13 +1234,24 @@ class ScrambledPhase(BaseScene):
             self.combo_streak = 0
             update_mastery(correct_word, False, False, self.progress_data)
             
-            # Flash scrambled display
-            self.scrambled_display.setStyleSheet("color: #ef4444; letter-spacing: 15px; background: transparent;")
-            QTimer.singleShot(300, lambda: self.scrambled_display.setStyleSheet("color: #facc15; letter-spacing: 15px; background: transparent;"))
+            self.incorrect_tries += 1
             
-            self.wobble(self.input_field)
-            self.screen_shake()
-            play_audio("Try again")
+            if self.incorrect_tries >= 3:
+                # 3 Strikes: Show correct word, turn red, and move on
+                self.input_field.setText(correct_word)
+                self.input_field.setStyleSheet("background-color: #2d0a0a; border: 3px solid #ef4444; color: #ef4444; max-width: 400px;")
+                self.input_field.setEnabled(False)
+                play_audio(f"The correct spelling is {correct_word}")
+                # Move to next word after a 2 second delay to let the user see the correct spelling
+                QTimer.singleShot(2000, self.next_word)
+            else:
+                # Flash scrambled display
+                self.scrambled_display.setStyleSheet("color: #ef4444; letter-spacing: 15px; background: transparent;")
+                QTimer.singleShot(300, lambda: self.scrambled_display.setStyleSheet("color: #facc15; letter-spacing: 15px; background: transparent;"))
+                
+                self.wobble(self.input_field)
+                self.screen_shake()
+                play_audio("Try again")
 
     def use_hint(self):
         """
@@ -1067,64 +1316,89 @@ class SummaryScene(BaseScene):
             return 0
 
     def create_report_table(self):
-        """Creates the Teacher's Report Card table."""
+        """Creates a professional sleek report card."""
         report = getattr(self.parent_window, 'session_report', [])
         container = QWidget()
+        container.setStyleSheet("""
+            QWidget {
+                background-color: rgba(10, 10, 10, 150);
+                border: 1px solid rgba(34, 211, 238, 80);
+                border-radius: 8px;
+            }
+        """)
         layout = QVBoxLayout(container)
-        layout.setSpacing(5)
+        layout.setSpacing(8)
+        layout.setContentsMargins(15, 15, 15, 15)
         
-        header = QLabel("SESSION PERFORMANCE REPORT")
-        header.setFont(QFont(self.arcade_family, 8))
-        header.setStyleSheet("color: #334155; margin-top: 10px;")
-        layout.addWidget(header)
+        header_layout = QHBoxLayout()
+        header_icon = QLabel("📊")
+        header_icon.setStyleSheet("background: transparent; border: none;")
+        header_text = QLabel("SESSION PERFORMANCE REPORT")
+        header_text.setFont(QFont(self.arcade_family, 10))
+        header_text.setStyleSheet("color: #22d3ee; background: transparent; border: none; letter-spacing: 2px;")
+        header_layout.addWidget(header_icon)
+        header_layout.addWidget(header_text)
+        header_layout.addStretch()
+        layout.addLayout(header_layout)
+
+        # Divider
+        line = QFrame(self)
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setStyleSheet("background-color: rgba(34, 211, 238, 50); border: none;")
+        line.setFixedHeight(1)
+        layout.addWidget(line)
         
-        for item in report:
-            row = QWidget()
-            row_l = QHBoxLayout(row)
-            row_l.setContentsMargins(0,2,0,2)
-            
+        # Grid for report items (2 columns)
+        grid_widget = QWidget()
+        grid_widget.setStyleSheet("background: transparent; border: none;")
+        grid_layout = QGridLayout(grid_widget)
+        grid_layout.setContentsMargins(0, 0, 0, 0)
+        grid_layout.setHorizontalSpacing(30)
+        grid_layout.setVerticalSpacing(6)
+        
+        for i, item in enumerate(report):
             w_lbl = QLabel(item["word"])
             w_lbl.setFont(QFont(self.arcade_family, 8))
-            w_lbl.setStyleSheet("color: #FFFFFF; border: none;")
+            w_lbl.setStyleSheet("color: #ffffff; background: transparent; border: none;")
             
             s_lbl = QLabel(item["status"])
-            s_lbl.setFont(QFont(self.arcade_family, 7))
-            s_lbl.setStyleSheet(f"color: {item['color']}; border: none;")
+            s_lbl.setFont(QFont(self.arcade_family, 8))
+            s_lbl.setStyleSheet(f"color: {item['color']}; background: transparent; border: none;")
             
-            row_l.addWidget(w_lbl)
-            row_l.addStretch()
-            row_l.addWidget(s_lbl)
-            layout.addWidget(row)
+            row = i // 2
+            col = (i % 2) * 2
             
+            grid_layout.addWidget(w_lbl, row, col)
+            grid_layout.addWidget(s_lbl, row, col + 1, alignment=Qt.AlignmentFlag.AlignRight)
+            
+        layout.addWidget(grid_widget)
         return container
 
     def initUI(self):
         layout = QVBoxLayout(self)
-        layout.setSpacing(14)
-        layout.setContentsMargins(40, 16, 40, 24)
+        layout.setSpacing(20)
+        layout.setContentsMargins(40, 30, 40, 30)
         
         self.create_theme_toggle(layout)
 
-        # ── star burst ──────────────────────────────────────
+        # -- star burst --
         import random as _r
         import math as _m
         def spawn_stars():
-            for _ in range(35): # more stars!
+            for _ in range(40):
                 star = QLabel(_r.choice(["*","+","✦","★"]), self)
                 star.setFont(QFont(self.arcade_family, _r.randint(10,24)))
                 star.setStyleSheet(f"color:{_r.choice(NEON_COLORS)};background:transparent;")
                 
-                # Start at center
                 center = QPoint(self.width() // 2, self.height() // 2)
                 star.move(center)
                 star.show()
                 
                 anim = QPropertyAnimation(star, b"pos", self)
-                anim.setDuration(_r.randint(1000,2500))
+                anim.setDuration(_r.randint(1500,3000))
                 
-                # Random direction and distance
                 angle = _r.uniform(0, 2 * _m.pi)
-                dist  = _r.randint(200, 600)
+                dist  = _r.randint(300, 800)
                 end_x = int(center.x() + _m.cos(angle) * dist)
                 end_y = int(center.y() + _m.sin(angle) * dist)
                 
@@ -1138,92 +1412,86 @@ class SummaryScene(BaseScene):
                 QTimer.singleShot(_r.randint(0,800), anim.start)
         QTimer.singleShot(250, spawn_stars)
 
-        # ── MISSION COMPLETE title ───────────────────────────
-        self.title = QLabel("MISSION\nCOMPLETE!", self)
-        self.title.setFont(QFont(self.arcade_family, 38))
-        self.title.setStyleSheet("color: #ff00ff; background: transparent;")
+        # Main Container to hold everything nicely
+        main_container = QWidget()
+        main_container.setMaximumWidth(800)
+        main_layout = QVBoxLayout(main_container)
+        main_layout.setSpacing(25)
+        main_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(main_container, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        # -- TITLE --
+        self.title = QLabel("MISSION COMPLETE", self)
+        self.title.setFont(QFont(self.arcade_family, 36))
+        self.title.setStyleSheet("color: #ff00ff; background: transparent; letter-spacing: 5px;")
         self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_glow = QGraphicsDropShadowEffect(self.title)
-        title_glow.setBlurRadius(20); title_glow.setColor(QColor("#ff00ff")); title_glow.setOffset(0,0)
+        title_glow.setBlurRadius(25); title_glow.setColor(QColor("#ff00ff")); title_glow.setOffset(0,0)
         self.title.setGraphicsEffect(title_glow)
-        layout.addWidget(self.title)
+        main_layout.addWidget(self.title)
 
-        # ── Typewriter "NEW HIGH SCORE!" ─────────────────────
-        self._hs_full = "NEW HIGH SCORE!"
+        # -- Typewriter "NEW HIGH SCORE!" --
+        self._hs_full = "► EXCELLENT PERFORMANCE ◄"
         self._hs_idx  = 0
         self.hs_label = QLabel("", self)
         self.hs_label.setFont(QFont(self.arcade_family, 10))
-        self.hs_label.setStyleSheet("color: #4ade80; background: transparent;")
+        self.hs_label.setStyleSheet("color: #4ade80; background: transparent; letter-spacing: 3px;")
         self.hs_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.hs_label)
+        main_layout.addWidget(self.hs_label)
         self.hs_timer = QTimer(self)
         self.hs_timer.timeout.connect(self._type_hs)
-        self.hs_timer.start(80)
+        self.hs_timer.start(50)
 
-        # ── TIMER PANEL ──────────────────────────────────────
-        timer_panel = QWidget(self)
-        timer_panel.setStyleSheet("""
-            QWidget { background-color: #000000; border: 3px solid #22d3ee; }
+        # -- DASHBOARD PANEL --
+        dashboard = QWidget()
+        dashboard.setStyleSheet("""
+            QWidget {
+                background-color: rgba(0, 0, 0, 180);
+                border: 2px solid #22d3ee;
+                border-radius: 12px;
+            }
         """)
-        tp_glow = QGraphicsDropShadowEffect(timer_panel)
-        tp_glow.setBlurRadius(25); tp_glow.setColor(QColor("#22d3ee")); tp_glow.setOffset(0,0)
-        timer_panel.setGraphicsEffect(tp_glow)
-
-        tp_outer = QVBoxLayout(timer_panel)
-        tp_outer.setContentsMargins(20,16,20,16)
-        tp_outer.setSpacing(14)
-
-        panel_title = QLabel("⏱  TOTAL PLAYTIME EARNED", self)
-        panel_title.setFont(QFont(self.arcade_family, 9))
-        panel_title.setStyleSheet("color: #22d3ee; background: transparent; border: none; letter-spacing: 4px;")
-        panel_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        tp_outer.addWidget(panel_title)
-
-        # horizontal row: big time display + stats
-        row_widget = QWidget(self)
-        row_widget.setStyleSheet("background: transparent; border: none;")
-        row_layout = QHBoxLayout(row_widget)
-        row_layout.setContentsMargins(0,0,0,0)
-        row_layout.setSpacing(40)
-
-        # BIG earned time display
-        time_box = QWidget(self)
-        time_box.setStyleSheet("background: transparent; border: 2px solid #4ade80;")
+        dash_glow = QGraphicsDropShadowEffect(dashboard)
+        dash_glow.setBlurRadius(30); dash_glow.setColor(QColor("#22d3ee")); dash_glow.setOffset(0,0)
+        dashboard.setGraphicsEffect(dash_glow)
+        
+        dash_layout = QVBoxLayout(dashboard)
+        dash_layout.setContentsMargins(30, 25, 30, 25)
+        dash_layout.setSpacing(20)
+        
+        # Horizontal layout for Time Box & Stats
+        top_dash_layout = QHBoxLayout()
+        top_dash_layout.setSpacing(40)
+        
+        # Time Box
+        time_box = QWidget()
+        time_box.setStyleSheet("background: transparent; border: 1px solid rgba(74, 222, 128, 100); border-radius: 8px;")
         tb_layout = QVBoxLayout(time_box)
         tb_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        tb_layout.setContentsMargins(20,16,20,16)
-
-        earned_lbl = QLabel("EARNED", self)
-        earned_lbl.setFont(QFont(self.arcade_family, 7))
-        earned_lbl.setStyleSheet("color: #4ade80; background: transparent; border: none; letter-spacing: 3px;")
+        tb_layout.setContentsMargins(20, 15, 20, 15)
+        
+        earned_lbl = QLabel("⏱ TOTAL PLAYTIME")
+        earned_lbl.setFont(QFont(self.arcade_family, 8))
+        earned_lbl.setStyleSheet("color: #4ade80; background: transparent; border: none; letter-spacing: 2px;")
         earned_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         tb_layout.addWidget(earned_lbl)
-
+        
         mins_val, secs_val = divmod(self.earned_time, 60)
-        self.time_big = QLabel(f"{mins_val:02d}:{secs_val:02d}", self)
-        self.time_big.setFont(QFont(self.arcade_family, 56))
+        self.time_big = QLabel(f"{mins_val:02d}:{secs_val:02d}")
+        self.time_big.setFont(QFont(self.arcade_family, 48))
         self.time_big.setStyleSheet("color: #4ade80; background: transparent; border: none;")
         self.time_big.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        big_glow = QGraphicsDropShadowEffect(self.time_big)
-        big_glow.setBlurRadius(20); big_glow.setColor(QColor("#4ade80")); big_glow.setOffset(0,0)
-        self.time_big.setGraphicsEffect(big_glow)
         tb_layout.addWidget(self.time_big)
-
-        mm_ss = QLabel("MM  :  SS", self)
-        mm_ss.setFont(QFont(self.arcade_family, 7))
-        mm_ss.setStyleSheet("color: #22d3ee; background: transparent; border: none; letter-spacing: 2px;")
-        mm_ss.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        tb_layout.addWidget(mm_ss)
-
-        row_layout.addWidget(time_box)
-
-        # Stats column
-        stats_widget = QWidget(self)
+        
+        top_dash_layout.addWidget(time_box, stretch=1)
+        
+        # Stats List
+        stats_widget = QWidget()
         stats_widget.setStyleSheet("background: transparent; border: none;")
         stats_layout = QVBoxLayout(stats_widget)
-        stats_layout.setSpacing(8)
-        stats_layout.setContentsMargins(0,0,0,0)
-
+        stats_layout.setSpacing(12)
+        stats_layout.setContentsMargins(0, 0, 0, 0)
+        
         stats = [
             ("PHASE 1 BONUS",  f"+{mins_val*60}s",     "#22d3ee"),
             ("PHASE 2 BONUS",  "+240s",                 "#22d3ee"),
@@ -1233,66 +1501,72 @@ class SummaryScene(BaseScene):
         
         for label, val, color in stats:
             row = QHBoxLayout()
-            lbl = QLabel(label, self)
-            lbl.setFont(QFont(self.arcade_family, 7))
-            lbl.setStyleSheet("color: #334155; background: transparent; border: none;")
-            val_lbl = QLabel(val, self)
-            val_lbl.setFont(QFont(self.arcade_family, 9))
+            lbl = QLabel(label)
+            lbl.setFont(QFont(self.arcade_family, 8))
+            lbl.setStyleSheet("color: #94a3b8; background: transparent; border: none;")
+            val_lbl = QLabel(val)
+            val_lbl.setFont(QFont(self.arcade_family, 10))
             val_lbl.setStyleSheet(f"color: {color}; background: transparent; border: none;")
             row.addWidget(lbl)
             row.addStretch()
             row.addWidget(val_lbl)
             stats_layout.addLayout(row)
-
-            # divider before TOTAL TIME
+            
             if label == "PHASE 3 TOTAL":
-                line = QFrame(self)
+                line = QFrame()
                 line.setFrameShape(QFrame.Shape.HLine)
-                line.setStyleSheet("color: #1e293b; background: #1e293b; border: none;")
+                line.setStyleSheet("background-color: rgba(255, 255, 255, 30); border: none;")
                 line.setFixedHeight(1)
                 stats_layout.addWidget(line)
-
-        row_layout.addWidget(stats_widget)
-        row_layout.setStretch(0, 1)   # time_box gets 1 part
-        row_layout.setStretch(1, 2)   # stats_widget gets 2 parts
-        tp_outer.addWidget(row_widget)
+                
+        top_dash_layout.addWidget(stats_widget, stretch=2)
+        dash_layout.addLayout(top_dash_layout)
         
-        # --- NEW: REPORT CARD ---
+        # Add the Report Card
         report_widget = self.create_report_table()
-        tp_outer.addWidget(report_widget)
+        dash_layout.addWidget(report_widget)
         
-        layout.addWidget(timer_panel)
+        main_layout.addWidget(dashboard)
 
-        # ── Hearts ───────────────────────────────────────────
-        self.hearts_widget = QWidget(self)
+        # -- Bottom Status Bar (Hearts & Countdown) --
+        status_bar = QHBoxLayout()
+        
+        # Hearts
+        self.hearts_widget = QWidget()
         h_layout = QHBoxLayout(self.hearts_widget)
-        h_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        h_layout.setContentsMargins(0, 0, 0, 0)
+        h_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.hearts = []
-        for _ in range(5):
-            heart = QLabel("❤️", self)
-            heart.setFont(QFont("Arial", 32))
+        for _ in range(3):
+            heart = QLabel("❤️")
+            heart.setFont(QFont("Arial", 16))
             heart.setStyleSheet("background: transparent;")
             h_layout.addWidget(heart)
             self.hearts.append(heart)
-        layout.addWidget(self.hearts_widget)
+        status_bar.addWidget(self.hearts_widget)
+        
         self.heart_state = 0
         self.heart_timer = QTimer(self)
         self.heart_timer.timeout.connect(self.animate_hearts)
-        self.heart_timer.start(300)
-
-        # ── Blink countdown ──────────────────────────────────
-        self.countdown_label = QLabel(f"UNLOCK IN... {self.unlock_countdown}", self)
-        self.countdown_label.setFont(QFont(self.arcade_family, 20))
-        self.countdown_label.setStyleSheet("color: #facc15; background: transparent;")
-        self.countdown_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.countdown_label)
+        self.heart_timer.start(400)
+        
+        status_bar.addStretch()
+        
+        # Countdown
+        self.countdown_label = QLabel(f"SYSTEM UNLOCK IN {self.unlock_countdown}...")
+        self.countdown_label.setFont(QFont(self.arcade_family, 10))
+        self.countdown_label.setStyleSheet("color: #facc15; background: transparent; letter-spacing: 2px;")
+        self.countdown_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+        status_bar.addWidget(self.countdown_label)
+        
+        main_layout.addLayout(status_bar)
 
         self.blink_timer = QTimer(self)
         self._bl_vis = True
         def blink_cd():
             self._bl_vis = not self._bl_vis
             self.countdown_label.setStyleSheet(
-                f"color: #facc15; background: transparent; opacity: {'1.0' if self._bl_vis else '0.0'};"
+                f"color: #facc15; background: transparent; letter-spacing: 2px; opacity: {'1.0' if self._bl_vis else '0.0'};"
             )
         self.blink_timer.timeout.connect(blink_cd)
         self.blink_timer.start(500)
@@ -1323,7 +1597,7 @@ class SummaryScene(BaseScene):
     def tick_countdown(self):
         self.unlock_countdown -= 1
         if self.unlock_countdown > 0:
-            self.countdown_label.setText(f"UNLOCK IN... {self.unlock_countdown}")
+            self.countdown_label.setText(f"SYSTEM UNLOCK IN {self.unlock_countdown}...")
         else:
             self.blink_timer.stop()
             self.countdown_label.setVisible(True)

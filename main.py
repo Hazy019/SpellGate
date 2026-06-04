@@ -99,6 +99,15 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("SpellGate Lock")
         self.setStyleSheet("QMainWindow { background-color: #0a0a0a; }")
 
+        # Start low-volume background music
+        try:
+            import winsound
+            bgm_path = os.path.abspath(r"assets\bgm.wav")
+            if os.path.exists(bgm_path):
+                winsound.PlaySound(bgm_path, winsound.SND_FILENAME | winsound.SND_ASYNC | winsound.SND_LOOP)
+        except Exception as e:
+            print("Could not start background music:", e)
+
         # Ensure the data directory + time_bank exist — but NEVER reset earned time
         os.makedirs(os.path.dirname(TIME_BANK_FILE), exist_ok=True)
         if not os.path.exists(TIME_BANK_FILE):
