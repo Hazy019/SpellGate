@@ -12,6 +12,8 @@ from modules.ui_scenes import MemorizationScene, RecallScene, ScrambledPhase, Su
 from modules.loading_scene import LoadingScene
 
 from modules.config import TIME_BANK_FILE, USER_PROGRESS_FILE
+from modules.game_logic import load_progress
+from modules.startup_manager import install_to_startup
 
 
 class GlassyTimer(QWidget):
@@ -107,6 +109,9 @@ class MainWindow(QMainWindow):
                 winsound.PlaySound(bgm_path, winsound.SND_FILENAME | winsound.SND_ASYNC | winsound.SND_LOOP)
         except Exception as e:
             print("Could not start background music:", e)
+            
+        # Automatically register app to start on boot
+        install_to_startup()
 
         # Ensure the data directory + time_bank exist — but NEVER reset earned time
         os.makedirs(os.path.dirname(TIME_BANK_FILE), exist_ok=True)
@@ -114,7 +119,14 @@ class MainWindow(QMainWindow):
             with open(TIME_BANK_FILE, "w") as f:
                 f.write("0")
         
-        self.current_avatar = "Interceptor" # Default
+        progress_data = load_progress(USER_PROGRESS_FILE)
+        
+        self.current_avatar = progress_data.get("spaceship", None)
+        if self.current_avatar:
+            self.current_avatar_selected = True
+        else:
+            self.current_avatar = "Interceptor" # Default
+            
         self.kiosk = KioskManager(self)
         self.kiosk.enable_kiosk_mode()
 

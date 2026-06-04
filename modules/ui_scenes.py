@@ -131,6 +131,23 @@ class BaseScene(QWidget):
         font_id = QFontDatabase.addApplicationFont("assets/PressStart2P-Regular.ttf")
         self.arcade_family = QFontDatabase.applicationFontFamilies(font_id)[0] if font_id != -1 else "Arial"
 
+    def get_rank_title(self):
+        avatar = getattr(self.parent_window, 'current_avatar', 'Interceptor')
+        try:
+            from modules.config import USER_PROGRESS_FILE
+            from modules.game_logic import load_progress
+            progress_data = load_progress(USER_PROGRESS_FILE)
+            level = progress_data.get("current_level", "Novice")
+        except:
+            level = "Novice"
+        
+        ranks = {
+            "Interceptor": {"Novice": "CADET", "Apprentice": "STRIKE PILOT", "Scholar": "ACE COMMANDER"},
+            "Guardian": {"Novice": "SHIELD BEARER", "Apprentice": "SENTINEL", "Scholar": "BASTION PRIME"},
+            "Voyager": {"Novice": "EXPLORER", "Apprentice": "NAVIGATOR", "Scholar": "STARWAY CAPTAIN"}
+        }
+        return ranks.get(avatar, ranks["Interceptor"]).get(level, "CADET")
+
     def paintEvent(self, event):
         super().paintEvent(event)
         painter = QPainter(self)
@@ -443,6 +460,13 @@ class AvatarSelectionScene(BaseScene):
 
     def select_ship(self, name):
         self.parent_window.current_avatar = name
+        
+        from modules.config import USER_PROGRESS_FILE
+        from modules.game_logic import load_progress, save_progress
+        progress_data = load_progress(USER_PROGRESS_FILE)
+        progress_data["spaceship"] = name
+        save_progress(progress_data, USER_PROGRESS_FILE)
+        
         play_audio(f"{name} online!")
         self.parent_window.start_game()
 
@@ -566,7 +590,13 @@ class MemorizationScene(BaseScene):
         score_lbl.setFont(QFont(self.arcade_family, 9))
         score_lbl.setStyleSheet("color: #22d3ee; background: transparent;")
 
+        rank_lbl = QLabel(f"RANK: {self.get_rank_title()}", self)
+        rank_lbl.setFont(QFont(self.arcade_family, 9))
+        rank_lbl.setStyleSheet("color: #ff00ff; background: transparent;")
+
         hud_layout.addWidget(lives_lbl)
+        hud_layout.addStretch()
+        hud_layout.addWidget(rank_lbl)
         hud_layout.addStretch()
         hud_layout.addWidget(score_lbl)
         layout.addLayout(hud_layout)
@@ -853,8 +883,15 @@ class RecallScene(BaseScene):
                 f"border: 1px solid {bcolor}; color: {bcolor};"
                 "background-color: #0a0a0a; letter-spacing: 2px; margin-top: 2px;"
             )
+        for btn in getattr(self, 'snail_buttons', []):
+            btn.setEnabled(True)
+            bcolor = btn.styleSheet().split("color: ")[1].split(";")[0].strip() if "color: " in btn.styleSheet() else "#fff"
+            btn.setStyleSheet(
+                f"border: 1px solid {bcolor}; color: {bcolor};"
+                "background-color: #0a0a0a; letter-spacing: 2px; margin-top: 2px;"
+            )
 
-    def _on_replay_clicked(self, active_btn, word, sentence, active_color):
+    def _on_replay_clicked(self, active_btn, word, sentence, active_color, slow=False):
         """
         Called when a 🔊 HEAR WORD button is clicked.
         - Captures the current label of every replay button.
@@ -874,12 +911,18 @@ class RecallScene(BaseScene):
             btn_snapshot.append((bcolor, btn.text()))
 
         # Lock everything
-        self._lock_replay_buttons(active_btn, "🔊  HEAR WORD", active_color)
+        self._lock_replay_buttons(active_btn, "🔊" if not slow else "🐢", active_color)
+        for s_btn in getattr(self, 'snail_buttons', []):
+            s_btn.setEnabled(False)
+            s_btn.setStyleSheet(
+                s_btn.styleSheet().replace("background-color: #0a0a0a", "background-color: #050505")
+            )
 
         # Play with on_done that unlocks on completion
         play_audio(
             f"{word}. <PAUSE> {sentence}",
-            on_done=lambda: self._unlock_replay_buttons(btn_snapshot)
+            on_done=lambda: self._unlock_replay_buttons(btn_snapshot),
+            slow=slow
         )
 
 
@@ -900,8 +943,14 @@ class RecallScene(BaseScene):
         self.score_label = QLabel("SCORE: 00000", self)
         self.score_label.setFont(QFont(self.arcade_family, 9))
         self.score_label.setStyleSheet("color: #22d3ee; background: transparent;")
+        
+        rank_lbl = QLabel(f"RANK: {self.get_rank_title()}", self)
+        rank_lbl.setFont(QFont(self.arcade_family, 9))
+        rank_lbl.setStyleSheet("color: #ff00ff; background: transparent;")
 
         hud_layout.addWidget(self.lives_label)
+        hud_layout.addStretch()
+        hud_layout.addWidget(rank_lbl)
         hud_layout.addStretch()
         hud_layout.addWidget(self.score_label)
         layout.addLayout(hud_layout)
@@ -958,9 +1007,13 @@ class RecallScene(BaseScene):
             input_field.installEventFilter(self)
             cell_layout.addWidget(input_field)
 
+            btn_layout = QHBoxLayout()
+            btn_layout.setContentsMargins(0, 0, 0, 0)
+            btn_layout.setSpacing(5)
+
             # 🔊 Voice replay button — NoFocus so it NEVER steals focus from inputs
-            replay_btn = QPushButton("🔊  HEAR WORD")
-            replay_btn.setFont(QFont(self.arcade_family, 7))
+            replay_btn = QPushButton("🔊")
+            replay_btn.setFont(QFont(self.arcade_family, 10))
             replay_btn.setFixedHeight(28)
             replay_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)  # KEY FIX: prevents focus-stealing
             replay_btn.setStyleSheet(
@@ -968,7 +1021,24 @@ class RecallScene(BaseScene):
                 "background-color: #0a0a0a; letter-spacing: 2px; margin-top: 2px;"
             )
             self.replay_buttons.append(replay_btn)
-            cell_layout.addWidget(replay_btn)
+            btn_layout.addWidget(replay_btn)
+
+            # 🐢 Snail button for slow replay
+            snail_btn = QPushButton("🐢")
+            snail_btn.setFont(QFont(self.arcade_family, 10))
+            snail_btn.setFixedHeight(28)
+            snail_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            snail_btn.setStyleSheet(
+                f"border: 1px solid {color}; color: {color};"
+                "background-color: #0a0a0a; letter-spacing: 2px; margin-top: 2px;"
+            )
+            
+            if not hasattr(self, 'snail_buttons'):
+                self.snail_buttons = []
+            self.snail_buttons.append(snail_btn)
+            btn_layout.addWidget(snail_btn)
+            
+            cell_layout.addLayout(btn_layout)
 
             # progress tick
             tick = QWidget(self)
@@ -985,12 +1055,18 @@ class RecallScene(BaseScene):
                 row += 1
 
         # Wire up replay buttons NOW that self.replay_buttons is fully populated
-        for btn, word_data in zip(self.replay_buttons, self.words):
+        for i, (btn, word_data) in enumerate(zip(self.replay_buttons, self.words)):
             w = word_data["word"]
             sentence = word_data.get("sentence", "")
             btn_color = btn.styleSheet().split("color: ")[1].split(";")[0].strip()
+            
             btn.clicked.connect(
                 lambda _, b=btn, ww=w, ss=sentence, bc=btn_color: self._on_replay_clicked(b, ww, ss, bc)
+            )
+            
+            snail_btn = self.snail_buttons[i]
+            snail_btn.clicked.connect(
+                lambda _, b=snail_btn, ww=w, ss=sentence, bc=btn_color: self._on_replay_clicked(b, ww, ss, bc, slow=True)
             )
         
         grid_layout.setSpacing(18)
@@ -1161,6 +1237,12 @@ class ScrambledPhase(BaseScene):
         self.layout = layout
         
         self.create_theme_toggle(self.layout)
+        
+        rank_lbl = QLabel(f"RANK: {self.get_rank_title()}", self)
+        rank_lbl.setFont(QFont(self.arcade_family, 9))
+        rank_lbl.setStyleSheet("color: #ff00ff; background: transparent;")
+        self.layout.addWidget(rank_lbl, alignment=Qt.AlignmentFlag.AlignCenter)
+        
         self.layout.addStretch(1)   # push content down from top
 
         self.progress_label = QLabel(self)

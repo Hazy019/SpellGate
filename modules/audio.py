@@ -1,6 +1,7 @@
 import queue
 import threading
 import pyttsx3
+import time
 
 # ── Queues ────────────────────────────────────────────────────────────────────
 # Each item in speech_queue is a tuple: (text: str, on_done: callable | None)
@@ -56,9 +57,12 @@ def _audio_worker() -> None:
         if item is None:          # poison-pill → clean shutdown
             break
         if isinstance(item, str):
-            text, on_done = item, None
-        else:
+            text, on_done, slow = item, None, False
+        elif len(item) == 2:
             text, on_done = item
+            slow = False
+        else:
+            text, on_done, slow = item
 
         if engine is None:
             speech_queue.task_done()
@@ -83,7 +87,11 @@ def _audio_worker() -> None:
                 except queue.Empty:
                     break
 
-            import time
+            if slow:
+                engine.setProperty("rate", 60)
+            else:
+                engine.setProperty("rate", 120)
+
             parts = text.split("<PAUSE>")
             for i, part in enumerate(parts):
                 part = part.strip()
@@ -97,7 +105,11 @@ def _audio_worker() -> None:
             # Engine died externally — rebuild and retry once
             try:
                 engine = _make_engine()
-                import time
+                if slow:
+                    engine.setProperty("rate", 60)
+                else:
+                    engine.setProperty("rate", 120)
+
                 parts = text.split("<PAUSE>")
                 for i, part in enumerate(parts):
                     part = part.strip()
@@ -121,7 +133,7 @@ _worker_thread = threading.Thread(target=_audio_worker, daemon=True)
 _worker_thread.start()
 
 
-def play_audio(text: str, on_done=None) -> None:
+def play_audio(text: str, on_done=None, slow: bool = False) -> None:
     """
     Enqueue text for speech synthesis (non-blocking).
 
@@ -129,9 +141,10 @@ def play_audio(text: str, on_done=None) -> None:
         text:    The text to speak.
         on_done: Optional callable fired on the Qt main thread after speech
                  finishes.  Use this to re-enable buttons, etc.
+        slow:    If True, sets speech rate to 60 (half speed).
     """
     if text:
-        speech_queue.put((text, on_done))
+        speech_queue.put((text, on_done, slow))
 
 
 def stop_audio() -> None:
