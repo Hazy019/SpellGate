@@ -955,6 +955,7 @@ class RecallScene(BaseScene):
                 f"border-radius: 2px; color: #ff00ff; letter-spacing: 4px;"
             )
             input_field.returnPressed.connect(lambda idx=i: self.check_answer(idx))
+            input_field.installEventFilter(self)
             cell_layout.addWidget(input_field)
 
             # 🔊 Voice replay button — NoFocus so it NEVER steals focus from inputs
@@ -1016,13 +1017,22 @@ class RecallScene(BaseScene):
         if self.inputs:
             self.inputs[0].setFocus()
 
+    def eventFilter(self, obj, event):
+        from PyQt6.QtCore import QEvent
+        if event.type() == QEvent.Type.FocusIn:
+            if hasattr(self, 'inputs') and obj in self.inputs:
+                idx = self.inputs.index(obj)
+                rem = max(0, 3 - self.attempts[idx])
+                self.lives_label.setText("LIVES: " + "❤️" * rem + "💔" * (3 - rem))
+        return super().eventFilter(obj, event)
+
     def check_answer(self, index):
         user_text = self.inputs[index].text().strip().upper()
         correct_word = self.words[index]["word"].upper()
         if user_text == correct_word:
             self.earned_seconds += 300 # roadmap sync: +5 mins
             self.inputs[index].setEnabled(False)
-            self.inputs[index].setStyleSheet("background-color: #113311; border: 3px solid #4ade80; color: #4ade80;")
+            self.inputs[index].setStyleSheet("background-color: #113311; border: 3px solid #4ade80; color: #4ade80; letter-spacing: 4px;")
             
             self.inputs[index].glow.setColor(QColor("#4ade80"))
             self.inputs[index].glow.setBlurRadius(15)
@@ -1032,7 +1042,7 @@ class RecallScene(BaseScene):
             self.score += 100
             self.score_label.setText(f"SCORE: {self.score:05d}")
             
-            correct_so_far = sum(1 for inp in self.inputs if not inp.isEnabled())
+            correct_so_far = sum(1 for i, inp in enumerate(self.inputs) if not inp.isEnabled() and self.attempts[i] < 3)
             self.correct_count_lbl.setText(f"{correct_so_far} / {len(self.words)} CORRECT")
             
             tick = self.findChild(QWidget, f"tick_{index}")
@@ -1063,17 +1073,51 @@ class RecallScene(BaseScene):
         else:
             self.earned_seconds = max(0, self.earned_seconds - 300) # roadmap sync: -5 min
             self.combo_streak = 0
-            # Track failure in report
-            self.session_report.append({"word": self.words[index]["word"], "status": "RETRY", "color": "#facc15"})
             
-            widget = self.inputs[index]
-            original_style = widget.styleSheet()
-            widget.setStyleSheet("border: 3px solid #ef4444; background-color: #2d0a0a; color: #ef4444;")
-            QTimer.singleShot(400, lambda w=widget, s=original_style: w.setStyleSheet(s))
-            
-            self.wobble(widget)
-            self.screen_shake()
-            play_audio("Try again")
+            self.attempts[index] += 1
+            rem = max(0, 3 - self.attempts[index])
+            self.lives_label.setText("LIVES: " + "❤️" * rem + "💔" * (3 - rem))
+
+            if self.attempts[index] >= 3:
+                # Track failure in report
+                self.session_report.append({"word": self.words[index]["word"], "status": "FAILED", "color": "#ef4444"})
+                
+                widget = self.inputs[index]
+                widget.setText(correct_word)
+                widget.setStyleSheet("background-color: #2d0a0a; border: 3px solid #ef4444; color: #ef4444; letter-spacing: 4px;")
+                widget.setEnabled(False)
+                play_audio(f"The correct spelling is {correct_word}")
+                
+                correct_so_far = sum(1 for i, inp in enumerate(self.inputs) if not inp.isEnabled() and self.attempts[i] < 3)
+                self.correct_count_lbl.setText(f"{correct_so_far} / {len(self.words)} CORRECT")
+                
+                tick = self.findChild(QWidget, f"tick_{index}")
+                if tick:
+                    tick.setStyleSheet("background-color: #ef4444; border: none;")
+                    t_glow = QGraphicsDropShadowEffect(tick)
+                    t_glow.setBlurRadius(8); t_glow.setColor(QColor("#ef4444")); t_glow.setOffset(0,0)
+                    tick.setGraphicsEffect(t_glow)
+
+                if all(not inp.isEnabled() for inp in self.inputs):
+                    self.deposit_time(self.earned_seconds)
+                    QTimer.singleShot(2000, self.finish_recall)
+                else:
+                    for i in range(len(self.inputs)):
+                        if self.inputs[i].isEnabled():
+                            QTimer.singleShot(2000, self.inputs[i].setFocus)
+                            break
+            else:
+                # Track failure in report as RETRY
+                self.session_report.append({"word": self.words[index]["word"], "status": "RETRY", "color": "#facc15"})
+                
+                widget = self.inputs[index]
+                original_style = widget.styleSheet()
+                widget.setStyleSheet("border: 3px solid #ef4444; background-color: #2d0a0a; color: #ef4444; letter-spacing: 4px;")
+                QTimer.singleShot(400, lambda w=widget, s=original_style: w.setStyleSheet(s))
+                
+                self.wobble(widget)
+                self.screen_shake()
+                play_audio("Try again")
 
     def finish_recall(self):
         self.parent_window.session_report = self.session_report # Pass report to main window
