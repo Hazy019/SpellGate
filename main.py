@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 import json
 
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QGraphicsDropShadowEffect
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QGraphicsDropShadowEffect, QInputDialog, QLineEdit
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QPoint, QRect, QSequentialAnimationGroup, QPauseAnimation, QVariantAnimation, QAbstractAnimation
 from PyQt6.QtGui import QFont, QFontDatabase, QShortcut, QKeySequence, QIcon, QColor
 
@@ -14,8 +14,8 @@ from modules.loading_scene import LoadingScene
 from modules.config import TIME_BANK_FILE, USER_PROGRESS_FILE
 from modules.game_logic import load_progress
 from modules.startup_manager import install_to_startup
-
-
+from modules.security import secure_save_time, secure_load_time
+import subprocess
 class GlassyTimer(QWidget):
     def __init__(self):
         super().__init__()
@@ -70,11 +70,7 @@ class GlassyTimer(QWidget):
 
 
     def load_time(self):
-        try:
-            with open(TIME_BANK_FILE, "r") as f:
-                return int(f.read().strip())
-        except:
-            return 0 
+        return secure_load_time(TIME_BANK_FILE)
 
     def update_time(self):
         if self.time_left > 0:
@@ -84,8 +80,7 @@ class GlassyTimer(QWidget):
             self.label.setText(f"{hrs:02d}:{mins:02d}:{secs:02d}")
 
             if self.time_left % 10 == 0:
-                with open("data/time_bank.txt", "w") as f:
-                    f.write(str(self.time_left))
+                secure_save_time(self.time_left, TIME_BANK_FILE)
 
         else:
             self.timer.stop()
@@ -112,6 +107,18 @@ class MainWindow(QMainWindow):
             
         # Automatically register app to start on boot
         install_to_startup()
+        
+        # Start watchdog process
+        self.watchdog_process = None
+        try:
+            watchdog_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "watchdog.py")
+            if getattr(sys, 'frozen', False):
+                # Run the bundled watchdog if compiled
+                self.watchdog_process = subprocess.Popen(["watchdog.exe"])
+            else:
+                self.watchdog_process = subprocess.Popen([sys.executable, watchdog_path])
+        except Exception as e:
+            print("Failed to start watchdog:", e)
 
         # Ensure the data directory + time_bank exist — but NEVER reset earned time
         os.makedirs(os.path.dirname(TIME_BANK_FILE), exist_ok=True)
@@ -170,6 +177,13 @@ class MainWindow(QMainWindow):
 
     def trigger_playtime(self):
         """Closes time game, unlocks the PC, and launches the floating timer."""
+        # Stop the watchdog before unlocking, otherwise it might restart the kiosk
+        if hasattr(self, 'watchdog_process') and self.watchdog_process:
+            try:
+                self.watchdog_process.terminate()
+            except Exception as e:
+                print("Could not stop watchdog:", e)
+                
         self.kiosk.disable_kiosk_mode()
         self.hide()
 
@@ -177,8 +191,23 @@ class MainWindow(QMainWindow):
         self.floating_tracker.show()
 
     def emergency_exit(self):
-        self.kiosk.disable_kiosk_mode()
-        self.close()
+        pin, ok = QInputDialog.getText(
+            self, "Parent Override", "Enter 4-digit PIN:",
+            QLineEdit.EchoMode.Password
+        )
+        # In a real scenario, fetch this from config/Firebase
+        if ok and pin == "0602":
+            # Explicitly kill the watchdog so it doesn't restart the game
+            if hasattr(self, 'watchdog_process') and self.watchdog_process:
+                try:
+                    self.watchdog_process.terminate()
+                except Exception as e:
+                    print("Could not stop watchdog:", e)
+                    
+            self.kiosk.disable_kiosk_mode()
+            self.close()
+        elif ok:
+            print("Incorrect PIN.")
 
 
 if __name__ == "__main__":

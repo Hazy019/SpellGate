@@ -19,10 +19,13 @@ class KioskManager:
 
         try:
             keyboard.block_key('windows')
-            keyboard.block_key('alt')
-            keyboard.block_key('tab')
             keyboard.block_key('esc')
-            keyboard.block_key('f4')
+            
+            # Explicitly suppress system combos
+            keyboard.add_hotkey('alt+tab', lambda: None, suppress=True)
+            keyboard.add_hotkey('alt+f4', lambda: None, suppress=True)
+            keyboard.add_hotkey('ctrl+shift+esc', lambda: None, suppress=True)
+            keyboard.add_hotkey('ctrl+esc', lambda: None, suppress=True)
         except Exception as e:
             print(f"Keyboard hook error: {e}")
 

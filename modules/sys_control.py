@@ -3,21 +3,18 @@ import time
 import threading
 
 
+from modules.security import secure_load_time, secure_save_time
+
 class SystemController:
     def __init__(self):
         self.time_remaining = self.load_time()
         self.is_running = True
     
     def load_time(self):
-        try:
-            with open("data/time_bank.txt", "r") as f:
-                return int(f.read())  
-        except:
-            return 0
+        return secure_load_time()
 
     def save_time(self):
-        with open("data/time_bank.txt", "w") as f:
-            f.write(str(self.time_remaining))
+        secure_save_time(self.time_remaining)
 
     def start_countdown(self):
         while self.is_running:

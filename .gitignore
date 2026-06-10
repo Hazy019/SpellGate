@@ -136,8 +136,10 @@ ENV/
 env.bak/
 venv.bak/
 
-# SpellGate Secrets
+# SpellGate Secrets — NEVER commit these
 gemini.env
+serviceAccountKey.json
+*.json.key
 /dist/
 /build/
 *.spec

@@ -2,14 +2,13 @@ import random
 import json
 import csv
 import os
-from dotenv import load_dotenv
 from modules.config import USER_PROGRESS_FILE, TIME_BANK_FILE
+from modules.security import get_api_key
 
 # ─────────────────────────────────────────────────────────────
 #  ENVIRONMENT SETUP
 # ─────────────────────────────────────────────────────────────
-load_dotenv("gemini.env")
-api_key = os.getenv("GEMINI_API_KEY")
+api_key = get_api_key()
 
 # ─────────────────────────────────────────────────────────────
 #  3-MODEL FALLBACK CHAIN  (what you call a "Model Cascade")
@@ -559,25 +558,12 @@ def get_next_words(progress_data, csv_path, count=12):
 # ─────────────────────────────────────────────────────────────
 #  PERSISTENCE
 # ─────────────────────────────────────────────────────────────
+from modules.security import secure_save_progress, secure_load_progress
 
 def save_progress(progress_data, file_path=USER_PROGRESS_FILE):
-    """Saves the player's Report Card to the JSON file."""
-    try:
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(progress_data, f, indent=4)
-    except Exception as e:
-        print(f"[Save] Error: {e}")
-
+    """Saves the player's Report Card to the JSON file securely."""
+    secure_save_progress(progress_data, file_path)
 
 def load_progress(file_path=USER_PROGRESS_FILE):
-    """Loads the player's Report Card from JSON. Returns a fresh dict if not found."""
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {
-            "mastered_words": [],
-            "learning_pool": {},
-            "current_level": "Novice",
-        }
+    """Loads the player's Report Card from JSON securely."""
+    return secure_load_progress(file_path)
