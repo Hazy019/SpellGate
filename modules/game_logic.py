@@ -491,15 +491,23 @@ def get_next_words(progress_data, csv_path, count=12):
     """
     # 1. Start with words already in the learning pool
     active_words = list(progress_data.get("learning_pool", {}).keys())
+    
+    # SHUFFLE to prevent showing the exact same words in the exact same order
+    random.shuffle(active_words)
 
-    if len(active_words) >= count:
-        return [
-            {"word": w, "sentence": progress_data["learning_pool"][w].get("sentence", f"Spell {w}.")}
-            for w in active_words[:count]
-        ]
+    # Force rotation: take a maximum of (count - 4) words from the existing pool
+    # so the child ALWAYS sees at least 4 new words per session.
+    max_existing = max(count - 4, 1)
+    selected_active = active_words[:max_existing]
+
+    # Prevent the learning pool from growing infinitely if the child is stuck
+    if len(active_words) > 20:
+        for w in active_words[20:]:
+            if w in progress_data["learning_pool"] and w not in selected_active:
+                del progress_data["learning_pool"][w]
 
     # 2. Determine how many new words we need
-    missing_count = count - len(active_words)
+    missing_count = count - len(selected_active)
     mastered = progress_data.get("mastered_words", [])
     level_name, min_l, max_l = calculate_level(mastered)
     excluded = set(mastered + active_words)
@@ -531,8 +539,8 @@ def get_next_words(progress_data, csv_path, count=12):
     # 5. Populate learning pool with new words
     final_list = []
 
-    # Existing words first
-    for w in active_words:
+    # Existing words first (only the ones we selected for rotation)
+    for w in selected_active:
         final_list.append({
             "word": w,
             "sentence": progress_data["learning_pool"][w].get("sentence", f"Spell {w}."),

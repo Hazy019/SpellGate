@@ -80,7 +80,7 @@ def _audio_worker() -> None:
                         break
                     # If stale item had its own callback, fire it immediately (no speech)
                     if isinstance(stale, tuple):
-                        _, stale_cb = stale
+                        stale_cb = stale[1] if len(stale) >= 2 else None
                         if stale_cb:
                             done_callbacks.put(stale_cb)
                     speech_queue.task_done()
