@@ -525,6 +525,14 @@ class MemorizationScene(BaseScene):
 
     def on_words_loaded(self, words):
         self.words = words
+        
+        # Adaptive time bonus for longer words
+        extra_time = 0
+        for w in words:
+            if len(w.get("word", "")) >= 7:
+                extra_time += 60
+        self.time_left += extra_time
+        
         save_progress(self.progress_data)
         self.blink_timer.stop()
         self.loading_container.hide()

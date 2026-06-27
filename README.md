@@ -14,6 +14,7 @@
     *   **Fallback Chain**: If the primary AI model fails (e.g., API quota reached), it automatically tries 2 fallback models.
     *   **100% Offline Support**: If the internet goes down or all API calls fail, the app falls back seamlessly to a built-in library of over 150+ curated spelling words and sentences across all difficulty tiers.
 *   **⏳ Time Bank Persistence**: Earned playtime is saved locally (`LOCALAPPDATA`). If the PC restarts, the earned time is preserved.
+*   **🔁 Spaced Repetition (Recall Stage)**: Seamlessly slips 1-2 previously mastered words back into the daily learning pool to test long-term retention. If they fail, they must re-master the word!
 *   **🖥️ Floating Desktop Timer**: An always-on-top, draggable cyberpunk-styled timer that counts down earned time.
 *   **🗣️ Audio Pronunciation (TTS)**: Uses a built-in zero-lag Text-to-Speech engine to read out words and sentences.
 

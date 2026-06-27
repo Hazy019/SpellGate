@@ -309,29 +309,38 @@ def calculate_level(mastered_words):
     Returns (level_name, min_len, max_len)
     """
     count = len(mastered_words)
-    if count < 15:
-        return "Novice", 3, 4
+    if count < 10:
+        return "Novice I", 3, 4
+    elif count < 20:
+        return "Novice II", 4, 5
     elif count < 30:
-        return "Apprentice", 5, 6
+        return "Apprentice I", 5, 6
+    elif count < 40:
+        return "Apprentice II", 6, 7
+    elif count < 50:
+        return "Scholar I", 7, 8
     else:
-        return "Scholar", 7, 15
+        return "Scholar II", 8, 12
 
 
 # ─────────────────────────────────────────────────────────────
 #  OFFLINE FALLBACK — always available, no internet needed
 # ─────────────────────────────────────────────────────────────
 
+ALL_OFFLINE_WORDS = [
+    (w, s) for pool in OFFLINE_WORD_BANK.values() for w, s in pool
+]
+
 def _offline_word_bank(level_name, min_len, max_len, count, excluded_words):
     """
     Returns words from the built-in offline bank, filtered by tier + exclusions.
     This is the final safety net — works 100% without internet.
     """
-    pool = OFFLINE_WORD_BANK.get(level_name, OFFLINE_WORD_BANK["Novice"])
     excluded_upper = {w.upper() for w in excluded_words}
 
     candidates = [
         {"word": w.upper(), "sentence": s}
-        for w, s in pool
+        for w, s in ALL_OFFLINE_WORDS
         if min_len <= len(w) <= max_len and w.upper() not in excluded_upper
     ]
     random.shuffle(candidates)
@@ -464,6 +473,11 @@ def update_mastery(word, is_correct, hint_used, progress_data):
         stats["correct_strikes"] += 1
     else:
         stats["correct_strikes"] = 0
+        # If they fail a recall word, demote it from mastered_words
+        if "mastered_words" in progress_data and word in progress_data["mastered_words"]:
+            progress_data["mastered_words"].remove(word)
+            level_name, _, _ = calculate_level(progress_data["mastered_words"])
+            progress_data["current_level"] = level_name
 
     if stats["correct_strikes"] >= 3:
         progress_data.setdefault("mastered_words", [])
@@ -506,9 +520,23 @@ def get_next_words(progress_data, csv_path, count=12):
             if w in progress_data["learning_pool"] and w not in selected_active:
                 del progress_data["learning_pool"][w]
 
-    # 2. Determine how many new words we need
-    missing_count = count - len(selected_active)
+    # 2. Recall Stage: Inject up to 2 mastered words into the session
     mastered = progress_data.get("mastered_words", [])
+    if len(mastered) >= 5:
+        available_for_recall = [w for w in mastered if w not in active_words]
+        recall_words = random.sample(available_for_recall, min(2, len(available_for_recall)))
+        for rw in recall_words:
+            if rw not in progress_data["learning_pool"]:
+                progress_data["learning_pool"][rw] = {
+                    "correct_strikes": 2, # Start at 2 so they only need 1 correct spell to re-master
+                    "attempts": 0,
+                    "sentence": f"Recall this word: Can you spell {rw.lower()}?"
+                }
+            if rw not in selected_active and len(selected_active) < count:
+                selected_active.append(rw)
+
+    # 3. Determine how many new words we need
+    missing_count = count - len(selected_active)
     level_name, min_l, max_l = calculate_level(mastered)
     excluded = set(mastered + active_words)
 
