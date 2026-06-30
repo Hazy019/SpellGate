@@ -1,166 +1,257 @@
-import firebase_admin
-from firebase_admin import credentials, firestore
 import threading
 import queue
 import json
 import os
+import time
 from pathlib import Path
 import platform
 import datetime
+import requests
+from google.cloud import firestore
+from google.oauth2 import credentials
 
 # ─────────────────────────────────────────────────────────────
-#  HOW TO GET serviceAccountKey.json:
-#  1. Go to https://console.firebase.google.com
-#  2. Open your SpellGate project
-#  3. Click the gear icon → "Project Settings"
-#  4. Go to the "Service Accounts" tab
-#  5. Click "Generate new private key" → "Generate Key"
-#  6. A .json file downloads — rename it serviceAccountKey.json
-#  7. Place it in: SpellGate/SpellGate/serviceAccountKey.json
-#  ⚠  NEVER share or commit this file. It has full admin access.
+#  FIREBASE CONFIGURATION
 # ─────────────────────────────────────────────────────────────
+FIREBASE_API_KEY = "AIzaSyBaxgMa1KjvF017XSfUFob0KBiJ2DmGQCo"
+FIREBASE_PROJECT_ID = "spellgate-eb1e8"
 
-# Path is relative to main.py location (SpellGate root folder)
-SERVICE_ACCOUNT_PATH = os.path.join(os.path.dirname(__file__), "..", "serviceAccountKey.json")
+_db           = None
+_parent_uid   = None
+_force_unlock_watch = None   # Firestore real-time listener handle
+_token_refresh_timer = None
 
-# The local config file that stores the parent's UID after pairing
-PAIRING_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "pairing.json")
-
-_db = None
-_parent_uid = None
-
-# Offline queue: if sync fails, we hold data here and retry later
+# Offline queue — if sync fails, hold data and retry on next call
 _offline_queue = queue.Queue()
 
-
 # ─────────────────────────────────────────────────────────────
-#  PAIRING — links this app install to a parent's account
+#  AUTHENTICATION & INIT
 # ─────────────────────────────────────────────────────────────
 
-def load_parent_uid():
-    """Load the stored parent UID from the local pairing file."""
-    global _parent_uid
-    try:
-        with open(PAIRING_FILE, "r") as f:
-            data = json.load(f)
-            _parent_uid = data.get("parent_uid")
-            print(f"[Firebase] Loaded parent UID: {_parent_uid}")
-    except (FileNotFoundError, json.JSONDecodeError):
-        _parent_uid = None
-        print("[Firebase] No pairing file found. App is not linked to a parent account.")
-    return _parent_uid
-
-
-def save_parent_uid(uid: str):
-    """Save the parent UID after a successful pairing."""
-    global _parent_uid
-    _parent_uid = uid
-    os.makedirs(os.path.dirname(PAIRING_FILE), exist_ok=True)
-    with open(PAIRING_FILE, "w") as f:
-        json.dump({"parent_uid": uid}, f)
-    print(f"[Firebase] Paired with parent UID: {uid}")
-
-
-def pair_with_code(pairing_code: str) -> bool:
+def init_firebase():
     """
-    Given a 6-digit code the parent gets from the Dashboard,
-    look it up in Firestore and save the parent's UID locally.
-    Returns True on success, False on failure.
+    Initialize Firebase using the stored Refresh Token.
+    Returns True if successful, False if no token or login required.
     """
-    if not _db:
-        print("[Firebase] Cannot pair — Firebase not initialized.")
+    from modules.security import get_firebase_refresh_token
+    refresh_token = get_firebase_refresh_token()
+    
+    if not refresh_token:
+        print("[Firebase] No refresh token found. User must log in.")
         return False
+        
+    return _refresh_and_init(refresh_token)
+
+def login_with_email(email, password):
+    """
+    Log in using Email and Password via Firebase Auth REST API.
+    Returns (True, None) on success, (False, error_msg) on failure.
+    """
+    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API_KEY}"
+    payload = {
+        "email": email,
+        "password": password,
+        "returnSecureToken": True
+    }
+    
     try:
-        code_ref = _db.collection("pairing_codes").document(pairing_code)
-        doc = code_ref.get()
-        if doc.exists:
-            uid = doc.to_dict().get("parent_uid")
-            if uid:
-                save_parent_uid(uid)
-                # Delete the code so it can't be reused
-                code_ref.delete()
-                return True
-        print(f"[Firebase] Pairing code '{pairing_code}' not found or expired.")
-        return False
+        resp = requests.post(url, json=payload)
+        data = resp.json()
+        
+        if "error" in data:
+            return False, data["error"].get("message", "Unknown error")
+            
+        id_token = data["idToken"]
+        refresh_token = data["refreshToken"]
+        local_id = data["localId"]
+        
+        from modules.security import set_firebase_refresh_token
+        set_firebase_refresh_token(refresh_token)
+        
+        _init_firestore_client(id_token, local_id)
+        _schedule_token_refresh(refresh_token, int(data.get("expiresIn", 3600)))
+        register_app_install()
+        return True, None
+        
     except Exception as e:
-        print(f"[Firebase] Pairing error: {e}")
+        return False, str(e)
+
+def _refresh_and_init(refresh_token):
+    """Exchanges a refresh token for a new ID token and initializes Firestore."""
+    url = f"https://securetoken.googleapis.com/v1/token?key={FIREBASE_API_KEY}"
+    payload = {
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token
+    }
+    
+    try:
+        resp = requests.post(url, json=payload)
+        data = resp.json()
+        
+        if "error" in data:
+            print(f"[Firebase] Refresh token expired or invalid: {data['error']}")
+            return False
+            
+        id_token = data["id_token"]
+        new_refresh_token = data["refresh_token"]
+        local_id = data["user_id"]
+        
+        from modules.security import set_firebase_refresh_token
+        set_firebase_refresh_token(new_refresh_token)
+        
+        _init_firestore_client(id_token, local_id)
+        _schedule_token_refresh(new_refresh_token, int(data.get("expires_in", 3600)))
+        return True
+        
+    except Exception as e:
+        print(f"[Firebase] Failed to refresh token: {e}")
         return False
+
+def _init_firestore_client(id_token, uid):
+    global _db, _parent_uid
+    _parent_uid = uid
+    cred = credentials.Credentials(token=id_token)
+    _db = firestore.Client(project=FIREBASE_PROJECT_ID, credentials=cred)
+    print(f"[Firebase] ✅ Initialized Firestore for user: {uid}")
+
+def _schedule_token_refresh(refresh_token, expires_in):
+    global _token_refresh_timer
+    if _token_refresh_timer:
+        _token_refresh_timer.cancel()
+        
+    # Refresh 5 minutes before expiry
+    refresh_delay = max(0, expires_in - 300)
+    _token_refresh_timer = threading.Timer(refresh_delay, _refresh_and_init, args=(refresh_token,))
+    _token_refresh_timer.daemon = True
+    _token_refresh_timer.start()
+
+# ─────────────────────────────────────────────────────────────
+#  PARENT PIN
+# ─────────────────────────────────────────────────────────────
+
+def fetch_parent_pin() -> str | None:
+    """
+    Fetch the parent's emergency override PIN from Firestore.
+    Returns None if not set or offline.
+    """
+    if not _db or not _parent_uid:
+        return None
+    try:
+        doc = _get_settings_ref().get()
+        if doc.exists:
+            pin = doc.to_dict().get("parent_pin")
+            if pin:
+                from modules.security import set_local_pin
+                set_local_pin(str(pin))
+                return str(pin)
+    except Exception as e:
+        print(f"[Firebase] Could not fetch PIN: {e}")
+    return None
+
+def set_parent_pin(pin: str):
+    """
+    Saves the PIN to Firestore and caches it locally.
+    """
+    from modules.security import set_local_pin
+    set_local_pin(str(pin))
+    
+    if _db and _parent_uid:
+        try:
+            _get_settings_ref().set({"parent_pin": str(pin)}, merge=True)
+        except Exception as e:
+            print(f"[Firebase] Could not save PIN to cloud: {e}")
+
+# ─────────────────────────────────────────────────────────────
+#  FORCE UNLOCK — Real-time listener
+# ─────────────────────────────────────────────────────────────
+
+def start_force_unlock_listener(on_unlock_callback):
+    """
+    Start a Firestore real-time listener that fires when parent presses "Force Unlock".
+    """
+    global _force_unlock_watch
+    if not _db or not _parent_uid:
+        return None
+
+    settings_ref = _get_settings_ref()
+
+    def _on_snapshot(doc_snapshot, changes, read_time):
+        for doc in doc_snapshot:
+            if doc.exists and doc.to_dict().get("force_unlock") is True:
+                print("[Firebase] 🔓 Force unlock received from parent!")
+                try:
+                    settings_ref.update({"force_unlock": False})
+                except Exception:
+                    pass
+                if on_unlock_callback:
+                    on_unlock_callback()
+
+    try:
+        _force_unlock_watch = settings_ref.on_snapshot(_on_snapshot)
+        print("[Firebase] ✅ Force-unlock real-time listener active.")
+        return _force_unlock_watch
+    except Exception as e:
+        print(f"[Firebase] ⚠ Could not start force-unlock listener: {e}")
+        return None
+
+def stop_force_unlock_listener():
+    """Stop the real-time listener."""
+    global _force_unlock_watch
+    if _force_unlock_watch:
+        try:
+            _force_unlock_watch.unsubscribe()
+        except Exception:
+            pass
+        _force_unlock_watch = None
+
+def check_force_unlock(on_unlock_callback):
+    start_force_unlock_listener(on_unlock_callback)
+
+# ─────────────────────────────────────────────────────────────
+#  DEVICE HEARTBEAT
+# ─────────────────────────────────────────────────────────────
 
 def register_app_install():
-    """Sends a heartbeat to Firestore so the Dashboard knows the app is installed and alive."""
+    """Send a heartbeat to Firestore so the Dashboard knows the app is installed."""
     if not _db or not _parent_uid:
         return
-        
+
     def _heartbeat():
         try:
-            doc_ref = _db.collection('users').document(_parent_uid).collection('child_data').document('device')
+            doc_ref = (
+                _db.collection('users')
+                   .document(_parent_uid)
+                   .collection('child_data')
+                   .document('device')
+            )
             doc_ref.set({
-                'installed': True,
-                'install_date': datetime.datetime.utcnow().isoformat(),
-                'hostname': platform.node(),
-                'os_version': platform.version(),
-                'app_version': '1.0.0',
-                'last_heartbeat': firestore.SERVER_TIMESTAMP,
+                'installed':        True,
+                'install_date':     datetime.datetime.utcnow().isoformat(),
+                'hostname':         platform.node(),
+                'os_version':       platform.version(),
+                'app_version':      '1.1.0',
+                'last_heartbeat':   firestore.SERVER_TIMESTAMP,
             }, merge=True)
             print("[Firebase] Sent heartbeat / app install registration.")
         except Exception as e:
             print(f"[Firebase] Heartbeat failed: {e}")
-            
+
     threading.Thread(target=_heartbeat, daemon=True).start()
-
-# ─────────────────────────────────────────────────────────────
-#  INIT
-# ─────────────────────────────────────────────────────────────
-
-def init_firebase():
-    """Initialize the Firebase Admin SDK using the service account key."""
-    global _db
-    key_path = os.path.normpath(SERVICE_ACCOUNT_PATH)
-
-    if not os.path.exists(key_path):
-        print(
-            "[Firebase] ⚠  Sync DISABLED — serviceAccountKey.json not found.\n"
-            "           To enable: download from Firebase Console →\n"
-            "           Project Settings → Service Accounts → Generate new private key\n"
-            f"           and place it at: {key_path}"
-        )
-        return
-
-    try:
-        cred = credentials.Certificate(key_path)
-        firebase_admin.initialize_app(cred)
-        _db = firestore.client()
-        load_parent_uid()
-        if _parent_uid:
-            register_app_install()
-        print("[Firebase] ✅ Initialized successfully.")
-    except Exception as e:
-        print(f"[Firebase] ❌ Failed to initialize: {e}")
-
 
 # ─────────────────────────────────────────────────────────────
 #  WRITE — Child progress UP to Firestore
 # ─────────────────────────────────────────────────────────────
 
 def sync_progress_to_cloud(progress_data: dict):
-    """
-    Push the child's progress to Firestore under the parent's UID.
-    Runs on a background thread so it never blocks the game.
-    If it fails, data is queued and retried on the next sync.
-    """
     if not _db or not _parent_uid:
         _offline_queue.put(dict(progress_data))
         return
 
     def _upload():
         try:
-            # Drain any previously failed syncs first
             while not _offline_queue.empty():
                 queued = _offline_queue.get_nowait()
                 _get_progress_ref().set(queued, merge=True)
-                print("[Firebase] ✅ Retried queued sync.")
-
-            # Upload the current data
             _get_progress_ref().set(progress_data, merge=True)
             print("[Firebase] ✅ Progress synced to cloud.")
         except Exception as e:
@@ -169,16 +260,11 @@ def sync_progress_to_cloud(progress_data: dict):
 
     threading.Thread(target=_upload, daemon=True).start()
 
-
 # ─────────────────────────────────────────────────────────────
 #  READ — Pull game settings DOWN from Firestore
 # ─────────────────────────────────────────────────────────────
 
 def fetch_config_from_cloud(callback):
-    """
-    Fetch game settings (reward multiplier, force_unlock flag, etc.)
-    from Firestore. Calls `callback(config_dict)` on the background thread.
-    """
     if not _db or not _parent_uid:
         return
 
@@ -187,7 +273,6 @@ def fetch_config_from_cloud(callback):
             doc = _get_settings_ref().get()
             if doc.exists:
                 config = doc.to_dict()
-                print(f"[Firebase] ✅ Config fetched: {config}")
                 if callback:
                     callback(config)
         except Exception as e:
@@ -195,37 +280,11 @@ def fetch_config_from_cloud(callback):
 
     threading.Thread(target=_download, daemon=True).start()
 
-
-def check_force_unlock(on_unlock_callback):
-    """
-    Checks if the parent has pressed "Force Unlock" in the Dashboard.
-    If yes, triggers the callback and resets the flag in Firestore.
-    Call this every 60 seconds from the main game loop.
-    """
-    if not _db or not _parent_uid:
-        return
-
-    def _check():
-        try:
-            doc = _get_settings_ref().get()
-            if doc.exists and doc.to_dict().get("force_unlock") is True:
-                print("[Firebase] 🔓 Force unlock triggered by parent!")
-                # Reset the flag
-                _get_settings_ref().update({"force_unlock": False})
-                if on_unlock_callback:
-                    on_unlock_callback()
-        except Exception as e:
-            print(f"[Firebase] ❌ Force unlock check failed: {e}")
-
-    threading.Thread(target=_check, daemon=True).start()
-
-
 # ─────────────────────────────────────────────────────────────
 #  HELPERS
 # ─────────────────────────────────────────────────────────────
 
 def _get_progress_ref():
-    """Returns the Firestore document ref for this child's progress."""
     return (
         _db.collection("users")
            .document(_parent_uid)
@@ -233,9 +292,7 @@ def _get_progress_ref():
            .document("progress")
     )
 
-
 def _get_settings_ref():
-    """Returns the Firestore document ref for this family's game settings."""
     return (
         _db.collection("users")
            .document(_parent_uid)
@@ -243,7 +300,5 @@ def _get_settings_ref():
            .document("settings")
     )
 
-
 def is_connected() -> bool:
-    """Returns True if Firebase is initialized and paired with a parent account."""
     return _db is not None and _parent_uid is not None

@@ -31,16 +31,20 @@ def build():
     print()
     print("-" * 45)
     if result == 0:
-        exe_path = os.path.abspath(os.path.join("dist", "SpellGate.exe"))
+        # COLLECT mode puts the EXE inside dist/SpellGate/ (not dist/ directly)
+        exe_path = os.path.abspath(os.path.join("dist", "SpellGate", "SpellGate.exe"))
+        dist_dir = os.path.dirname(exe_path)
         size_mb = os.path.getsize(exe_path) / 1024 / 1024
-        print(f"Build COMPLETE! ({size_mb:.1f} MB)")
-        print(f"EXE location: {exe_path}")
+        print(f"✅ Build COMPLETE! SpellGate.exe = {size_mb:.1f} MB")
+        print(f"   Folder: {dist_dir}")
         print()
-        print("Deployment steps:")
-        print("  1. Copy dist/SpellGate.exe to the child's PC")
-        print("  2. Right-click SpellGate.exe -> Run as Administrator")
-        print("  3. Kiosk mode activates automatically on launch")
-        print("  4. Parent exit: Ctrl+Shift+P")
+        print("Next steps:")
+        print("  1. Build installer:  iscc installer\\SpellGateSetup.iss")
+        print("  2. Upload SpellGateSetup.exe to GitHub Releases (tag: v1.x.x)")
+        print("  3. Parents download SpellGateSetup.exe from the website")
+        print()
+        print("For quick local testing (dev only):")
+        print(f"  Run: {exe_path}")
     else:
         print("Build FAILED. Check output above for errors.")
 
