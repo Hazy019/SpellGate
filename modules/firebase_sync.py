@@ -112,7 +112,7 @@ def _init_firestore_client(id_token, uid):
     _parent_uid = uid
     cred = credentials.Credentials(token=id_token)
     _db = firestore.Client(project=FIREBASE_PROJECT_ID, credentials=cred)
-    print(f"[Firebase] ✅ Initialized Firestore for user: {uid}")
+    print(f"[Firebase] [OK] Initialized Firestore for user: {uid}")
 
 def _schedule_token_refresh(refresh_token, expires_in):
     global _token_refresh_timer
@@ -178,7 +178,7 @@ def start_force_unlock_listener(on_unlock_callback):
     def _on_snapshot(doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
             if doc.exists and doc.to_dict().get("force_unlock") is True:
-                print("[Firebase] 🔓 Force unlock received from parent!")
+                print("[Firebase] [Unlocked] Force unlock received from parent!")
                 try:
                     settings_ref.update({"force_unlock": False})
                 except Exception:
@@ -188,7 +188,7 @@ def start_force_unlock_listener(on_unlock_callback):
 
     try:
         _force_unlock_watch = settings_ref.on_snapshot(_on_snapshot)
-        print("[Firebase] ✅ Force-unlock real-time listener active.")
+        print("[Firebase] [OK] Force-unlock real-time listener active.")
         return _force_unlock_watch
     except Exception as e:
         print(f"[Firebase] ⚠ Could not start force-unlock listener: {e}")
@@ -253,9 +253,9 @@ def sync_progress_to_cloud(progress_data: dict):
                 queued = _offline_queue.get_nowait()
                 _get_progress_ref().set(queued, merge=True)
             _get_progress_ref().set(progress_data, merge=True)
-            print("[Firebase] ✅ Progress synced to cloud.")
+            print("[Firebase] [OK] Progress synced to cloud.")
         except Exception as e:
-            print(f"[Firebase] ❌ Sync failed, re-queued: {e}")
+            print(f"[Firebase] [Error] Sync failed, re-queued: {e}")
             _offline_queue.put(dict(progress_data))
 
     threading.Thread(target=_upload, daemon=True).start()
@@ -276,7 +276,7 @@ def fetch_config_from_cloud(callback):
                 if callback:
                     callback(config)
         except Exception as e:
-            print(f"[Firebase] ❌ Failed to fetch config: {e}")
+            print(f"[Firebase] [Error] Failed to fetch config: {e}")
 
     threading.Thread(target=_download, daemon=True).start()
 

@@ -419,8 +419,17 @@ class MainWindow(QMainWindow):
 
     def emergency_exit(self):
         """Ctrl+Shift+P — asks for parent PIN, then unlocks and closes."""
-        # Determine active PIN: Firebase (live) → local cache → hardcoded default
-        active_pin = self._parent_pin or get_local_pin() or "0000"
+        # Determine active PIN: Firebase (live) → local cache
+        active_pin = self._parent_pin or get_local_pin()
+
+        if not active_pin:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self, "SpellGate Lock",
+                "Emergency exit is disabled because no override PIN has been configured.\n\n"
+                "Please configure a PIN in the Parent Dashboard or complete the setup."
+            )
+            return
 
         pin, ok = QInputDialog.getText(
             self, "Parent Override", "Enter your PIN:",
