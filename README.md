@@ -1,84 +1,83 @@
-# SPELLGATE 🚀 | Arcade Kiosk Edition
+# SpellGate
 
-> **Transforming screen time into a hard-earned reward through AI-driven linguistic mastery.**
+**SpellGate** is an educational screen-time management system that gamifies spelling. It consists of a robust, kiosk-mode Windows application for children and a real-time web dashboard for parents.
 
-**SpellGate** is a high-stakes educational lock-screen and kiosk application designed for children. It locks system access behind a neon-drenched retro interface and gamifies screen time management by requiring the user to master spelling words to "earn" computer playtime. Once time is earned, a floating timer sits on the desktop, gracefully shutting down the PC when time runs out.
-
----
-
-## 🎯 Core Features
-
-*   **🔒 Kiosk Lockdown Mode**: Automatically locks the screen, disables the Windows key, Alt-Tab, and Task Manager (when run as Administrator). The child must spell words to unlock the PC.
-*   **📈 Progressive Difficulty (Novice → Apprentice → Scholar)**: Tracks word mastery using a 3-strike system. The difficulty adapts as the child successfully spells words.
-*   **🧠 Model Cascade Engine (Offline Resilient)**: Powered by Google's Gemini AI to generate custom, educational sentences for words.
-    *   **Fallback Chain**: If the primary AI model fails (e.g., API quota reached), it automatically tries 2 fallback models.
-    *   **100% Offline Support**: If the internet goes down or all API calls fail, the app falls back seamlessly to a built-in library of over 150+ curated spelling words and sentences across all difficulty tiers.
-*   **⏳ Time Bank Persistence**: Earned playtime is saved locally (`LOCALAPPDATA`). If the PC restarts, the earned time is preserved.
-*   **🔁 Spaced Repetition (Recall Stage)**: Seamlessly slips 1-2 previously mastered words back into the daily learning pool to test long-term retention. If they fail, they must re-master the word!
-*   **🖥️ Floating Desktop Timer**: An always-on-top, draggable cyberpunk-styled timer that counts down earned time.
-*   **🗣️ Audio Pronunciation (TTS)**: Uses a built-in zero-lag Text-to-Speech engine to read out words and sentences.
+By intercepting screen time, SpellGate requires children to complete spelling challenges powered by a dynamic AI engine before they can unlock their PC. Parents can monitor progress in real-time, adjust rewards, and force-unlock the machine remotely.
 
 ---
 
-## 🔐 Kiosk Security & Control System
+## 🏗️ Architecture
 
-*   **Hard Lock:** Stays "Always on Top" and suppresses system hotkeys.
-*   **Auto-Shutdown:** Executes an OS-level shutdown if the timer hits `00:00:00`.
-*   **Parental Override:** Secure bypass via **`Ctrl + Shift + P`** from the kiosk screen.
+SpellGate is built on a two-part architecture, synced instantly via Firebase:
 
-### App Data Location
-SpellGate stores user progress and time bank balances in the local application data directory. This ensures data survives app updates and is safely partitioned per Windows user.
-*   **Path**: `C:\Users\[Username]\AppData\Local\SpellGate`
-*   `user_progress.json` - Tracks mastered words and current difficulty level. Delete this to wipe the child's progress.
-*   `time_bank.txt` - Tracks the remaining seconds of playtime. You can manually edit this file to grant bonus time or penalize time.
+1. **SpellGate Client (Python/PyQt6)**
+   - A locked-down kiosk application installed on the child's Windows PC.
+   - **AI Engine:** Uses a 3-model Gemini API cascade (Flash → Flash-Lite) to dynamically generate spelling challenges based on the child's mastery level.
+   - **Offline Resilience:** Includes a static offline word bank and a local data queue. If the internet drops, progress is queued and synced automatically once reconnected.
+   - **Security:** Utilizes Windows Registry Run Keys, a background Watchdog process to prevent Task Manager bypasses, and HMAC-SHA256 file signing to prevent local data tampering.
 
----
-
-## 🛠️ Technical Implementation & Deployment
-
-SpellGate is built using Python, `PyQt6`, and `PyInstaller`. It compiles down into a **single portable executable (`SpellGate.exe`)** that does not require Python or any dependencies to be installed on the target machine.
-
-### ⚙️ Requirements (For Developers)
-*   Python 3.12+
-*   Windows 10 / 11
-*   A Google Gemini API Key placed in a `gemini.env` file (Optional, required only for dynamic sentence generation).
-
-### Step 1: Building the Executable
-If you are compiling from source on your main PC:
-
-1. **Clone the Repository:**
-   ```cmd
-   git clone https://github.com/Hazy019/SpellGate.git
-   ```
-2. **Install Dependencies:**
-   ```cmd
-   pip install -r requirements.txt
-   ```
-3. **Run the build script:**
-   ```cmd
-   python package_app.py
-   ```
-4. A single `SpellGate.exe` file will be generated in the `dist/` folder.
-
-### Step 2: Deploying to the Child's PC
-1. Copy the built `dist/SpellGate.exe` to the child's Windows machine (e.g., via USB drive or Network Share).
-2. Right-click the executable and select **"Run as Administrator"**.
-   > *Note: Administrator privileges are required for the low-level keyboard hooks to block `Windows Key`, `Alt+Tab`, and other system shortcuts.*
-3. (Optional) **Set to auto-launch on startup**:
-   * Press `Win + R`, type `shell:startup`, and press Enter.
-   * Create a shortcut to `SpellGate.exe` in this folder.
-   * Right-click the shortcut → **Properties** → **Advanced** → Check **"Run as administrator"**.
+2. **Parent Dashboard (React/Vite)**
+   - A responsive, cyber-themed web portal for parents.
+   - **Real-time Data:** Uses Firebase `onSnapshot` listeners to stream the child's progress, accuracy, and earned screen time live.
+   - **Controls:** Allows parents to adjust the "Screen Time Exchange Rate" (e.g., 1 word = 30 seconds) and trigger remote unlocks.
 
 ---
 
-## 🎨 Design System
+## ✨ Key Features
 
-*   **Typography:** Press Start 2P
-*   **Success/Safe:** `#4ADE80` (Arcade Green)
-*   **Theme:** Neon-drenched Retro / Cyberpunk
+- **Adaptive Difficulty:** Automatically levels up the child (Novice → Apprentice → Scholar) as they master words.
+- **Tamper-Proof Kiosk:** Aggressive system hooks suppress `Alt+Tab`, `Alt+F4`, and `Ctrl+Shift+Esc` to prevent the child from bypassing the lock screen.
+- **Emergency Override:** A PIN-protected bypass (`Ctrl+Shift+P`) allows parents to use the locked PC instantly.
+- **Remote Force Unlock:** Parents can click a button on the web dashboard to instantly unlock the child's PC from their phone.
+- **Pairing System:** Secure 6-digit pairing codes securely link a child's local Windows installation to a parent's Firebase account.
 
 ---
 
-## 👨‍💻 Development Credits
+## 🚀 Getting Started
 
-**Lead Developer:** Kyrell Santillan
+### 1. Prerequisites
+- **Python 3.12+**
+- **Node.js 18+**
+- A **Firebase** project with Authentication (Email/Password) and Firestore Database enabled.
+- A **Google Gemini API Key**.
+
+### 2. Parent Dashboard Setup
+```bash
+cd ParentDashboard
+npm install
+
+# Create a .env file with your Firebase config
+# VITE_FIREBASE_API_KEY="..."
+# VITE_FIREBASE_AUTH_DOMAIN="..."
+# ...
+
+npm run dev
+```
+
+### 3. Python Client Setup
+```bash
+cd SpellGate
+python -m venv .env
+.env\Scripts\activate
+pip install -r requirements.txt
+
+# Securely store your Gemini API Key in Windows Credential Manager:
+# python -c "import keyring; keyring.set_password('SpellGate', 'gemini_api_key', 'YOUR_KEY_HERE')"
+
+# Add your Firebase serviceAccountKey.json to the SpellGate root folder.
+
+python main.py
+```
+
+### 4. Compiling the Executable
+To package the Python app into a standalone `.exe` for distribution:
+```bash
+pyinstaller SpellGate.spec
+```
+
+---
+
+## 🔒 Security Posture
+- **API Keys:** Never bundled in the executable. Fetched at runtime via OS credential manager.
+- **Database Rules:** Firestore strictly locks read/write access so users can only view their own family's data.
+- **File Integrity:** All local JSON and text files are cryptographically signed to prevent manual edits.

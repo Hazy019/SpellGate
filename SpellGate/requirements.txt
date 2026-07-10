@@ -1,0 +1,10 @@
+PyQt6==6.8.1
+google-genai>=0.8.0
+python-dotenv==1.0.1
+keyboard==0.13.5
+pyttsx3==2.98
+pywin32==306
+google-cloud-firestore>=2.14.0
+requests>=2.31.0
+keyring>=25.0.0
+psutil>=6.0.0

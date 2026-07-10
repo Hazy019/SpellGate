@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── User data: only the verified owner can read/write ──
+    match /users/{userId}/{document=**} {
+      allow read, update, delete: if
+        request.auth != null &&
+        request.auth.uid == userId &&
+        request.auth.token.email_verified == true;
+
+      allow create: if
+        request.auth != null &&
+        request.auth.uid == userId;
+    }
+
+    // ── Pairing codes: anyone authenticated can create one (for their own uid only)
+    //    and anyone authenticated can read/delete one (to consume it from the Python app)
+    //    Python app uses service account which bypasses these rules entirely.
+    match /pairing_codes/{code} {
+      allow create: if
+        request.auth != null &&
+        request.resource.data.parent_uid == request.auth.uid;
+      // Reading/deleting codes is handled server-side by the Python service account
+      allow read, delete: if false;
+    }
+
+  }
+}
