@@ -371,6 +371,13 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(AvatarSelectionScene(self))
 
     def start_game(self):
+        # If the user has remaining playtime (e.g. after a reboot/crash), skip lock screen
+        remaining_time = secure_load_time(TIME_BANK_FILE)
+        if remaining_time > 0:
+            print(f"[Main] Remaining playtime detected: {remaining_time}s. Restoring playtime.")
+            self.trigger_playtime()
+            return
+
         if not hasattr(self, 'current_avatar_selected'):
             self.current_avatar_selected = True
             self.show_avatar_selection()
@@ -455,33 +462,6 @@ class MainWindow(QMainWindow):
 # ─────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-
-    # ── Installer setup mode ──────────────────────────────────────
-    # Called by SpellGateSetup.iss BEFORE the Qt UI is launched.
-    # Usage: SpellGate.exe --setup-credentials <json_path> <pin>
-    # Stores the service account key + PIN in Credential Manager then exits.
-    if len(sys.argv) >= 4 and sys.argv[1] == "--setup-credentials":
-        json_path = sys.argv[2].strip('"')
-        pin       = sys.argv[3]
-        from modules.security import (
-            save_service_account_to_credential_manager, set_local_pin
-        )
-        ok_sa  = save_service_account_to_credential_manager(json_path)
-        set_local_pin(pin)
-        # Also initialise Firebase so the PIN is pushed to Firestore immediately
-        if ok_sa:
-            try:
-                from modules.firebase_sync import init_firebase, _get_settings_ref
-                import firebase_admin
-                init_firebase()
-                from modules.firebase_sync import _db, _parent_uid
-                if _db and _parent_uid:
-                    _get_settings_ref().set({"parent_pin": pin}, merge=True)
-                    print("[Setup] PIN written to Firestore.")
-            except Exception as e:
-                print(f"[Setup] Firestore write skipped: {e}")
-        sys.exit(0 if ok_sa else 1)
-
     # ── Normal launch ─────────────────────────────────────────────
     app = QApplication(sys.argv)
     window = MainWindow()

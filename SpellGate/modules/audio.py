@@ -11,6 +11,9 @@ speech_queue: queue.Queue = queue.Queue()
 # The UI thread polls this via a QTimer to fire them on the main thread.
 done_callbacks: queue.Queue = queue.Queue()
 
+_last_spoken_text = ""
+_last_spoken_time = 0.0
+
 
 def _make_engine():
     """Create and configure a pyttsx3 engine with best available voice."""
@@ -27,6 +30,7 @@ def _make_engine():
             break
         if "David" in vname and chosen is None:
             chosen = voice.id
+            break
     if chosen:
         engine.setProperty("voice", chosen)
     return engine
@@ -71,21 +75,17 @@ def _audio_worker() -> None:
             continue
 
         try:
-            # Drain only plain-string stale entries (don't discard queued callbacks)
-            while not speech_queue.empty():
-                try:
-                    stale = speech_queue.get_nowait()
-                    if stale is None:
-                        speech_queue.put(None)
-                        break
-                    # If stale item had its own callback, fire it immediately (no speech)
-                    if isinstance(stale, tuple):
-                        stale_cb = stale[1] if len(stale) >= 2 else None
-                        if stale_cb:
-                            done_callbacks.put(stale_cb)
-                    speech_queue.task_done()
-                except queue.Empty:
-                    break
+            # Prevent speech spam by skipping exact duplicate messages sent within 1.5 seconds.
+            global _last_spoken_text, _last_spoken_time
+            now = time.time()
+            if text == _last_spoken_text and (now - _last_spoken_time) < 1.5:
+                speech_queue.task_done()
+                if on_done:
+                    done_callbacks.put(on_done)
+                continue
+            
+            _last_spoken_text = text
+            _last_spoken_time = now
 
             if slow:
                 engine.setProperty("rate", 60)

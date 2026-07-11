@@ -8,6 +8,7 @@ from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QPoint, QEasingCurve, Q
 from PyQt6.QtGui import QFont, QColor, QFontDatabase, QPainter, QPen
 from modules.game_logic import generate_scrambled, update_mastery, get_next_words, save_progress, load_progress
 from modules.config import TIME_BANK_FILE, USER_PROGRESS_FILE
+from modules.security import secure_load_time, secure_save_time
 
 DARK_THEME = """
     QWidget { 
@@ -1210,12 +1211,10 @@ class RecallScene(BaseScene):
     def deposit_time(self, seconds):
         # ISSUE-05 FIX: clamp to >= 0 (same as ScrambledPhase)
         try:
-            with open(TIME_BANK_FILE, "r") as f:
-                current = int(f.read().strip())
-            with open(TIME_BANK_FILE, "w") as f:
-                f.write(str(max(0, current + seconds)))
-        except:
-            pass
+            current = secure_load_time(TIME_BANK_FILE)
+            secure_save_time(max(0, current + seconds), TIME_BANK_FILE)
+        except Exception as e:
+            print(f"[RecallScene] Failed to deposit time: {e}")
 
 # --- PHASE 3 ---
 class ScrambledPhase(BaseScene):
@@ -1415,12 +1414,10 @@ class ScrambledPhase(BaseScene):
 
     def deposit_time(self, seconds):
         try:
-            with open(TIME_BANK_FILE, "r") as f:
-                current = int(f.read().strip())
-            with open(TIME_BANK_FILE, "w") as f:
-                f.write(str(max(0, current + seconds)))
-        except:
-            pass
+            current = secure_load_time(TIME_BANK_FILE)
+            secure_save_time(max(0, current + seconds), TIME_BANK_FILE)
+        except Exception as e:
+            print(f"[ScrambledPhase] Failed to deposit time: {e}")
 
 
     def next_word(self):
@@ -1444,9 +1441,9 @@ class SummaryScene(BaseScene):
 
     def read_final_time(self):
         try:
-            with open(TIME_BANK_FILE, "r") as f:
-                return int(f.read().strip())
-        except:
+            return secure_load_time(TIME_BANK_FILE)
+        except Exception as e:
+            print(f"[SummaryScene] Failed to read final time: {e}")
             return 0
 
     def create_report_table(self):

@@ -5,7 +5,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont, QColor
 
 from modules.ui_scenes import BaseScene
-from modules.firebase_sync import login_with_email, set_parent_pin
+from modules.firebase_sync import pair_device
 
 class LoginScene(BaseScene):
     login_successful = pyqtSignal()
@@ -20,7 +20,7 @@ class LoginScene(BaseScene):
         layout.setSpacing(20)
 
         # Title
-        title = QLabel("PARENT LOGIN")
+        title = QLabel("PAIR DEVICE")
         title.setObjectName("Header")
         title.setFont(QFont(self.arcade_family, 36))
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -33,7 +33,7 @@ class LoginScene(BaseScene):
         title.setGraphicsEffect(glow)
         layout.addWidget(title)
         
-        subtitle = QLabel("Please log in with your Parent Dashboard account.")
+        subtitle = QLabel("Enter the 6-digit code shown in your Parent Dashboard to link this PC.")
         subtitle.setFont(QFont("Arial", 12))
         subtitle.setStyleSheet("color: #cccccc;")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -44,39 +44,28 @@ class LoginScene(BaseScene):
         form_layout = QVBoxLayout(form_container)
         form_layout.setSpacing(15)
         
-        # Email
-        self.email_input = QLineEdit()
-        self.email_input.setPlaceholderText("Email Address")
-        self.email_input.setFont(QFont("Arial", 14))
-        self.email_input.setStyleSheet("padding: 12px; background: #111; color: #fff; border: 2px solid #333; border-radius: 5px;")
-        form_layout.addWidget(self.email_input)
-        
-        # Password
-        self.password_input = QLineEdit()
-        self.password_input.setPlaceholderText("Password")
-        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.password_input.setFont(QFont("Arial", 14))
-        self.password_input.setStyleSheet("padding: 12px; background: #111; color: #fff; border: 2px solid #333; border-radius: 5px;")
-        form_layout.addWidget(self.password_input)
-        
-        # PIN
-        pin_label = QLabel("Set Emergency Unlock PIN (min 4 digits):")
-        pin_label.setStyleSheet("color: #ffc857; margin-top: 10px;")
-        pin_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
-        form_layout.addWidget(pin_label)
-        
-        self.pin_input = QLineEdit()
-        self.pin_input.setPlaceholderText("e.g. 1234")
-        self.pin_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.pin_input.setMaxLength(8)
-        self.pin_input.setFont(QFont("Arial", 14))
-        self.pin_input.setStyleSheet("padding: 12px; background: #111; color: #ffc857; border: 2px solid #ffc857; border-radius: 5px;")
-        form_layout.addWidget(self.pin_input)
+        # Pairing Code Input
+        self.code_input = QLineEdit()
+        self.code_input.setPlaceholderText("000000")
+        self.code_input.setMaxLength(6)
+        self.code_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.code_input.setFont(QFont("Arial", 24, QFont.Weight.Bold))
+        self.code_input.setStyleSheet("""
+            QLineEdit {
+                padding: 12px;
+                background: #111;
+                color: #00e5ff;
+                border: 2px solid #00e5ff;
+                border-radius: 8px;
+                letter-spacing: 6px;
+            }
+        """)
+        form_layout.addWidget(self.code_input)
         
         layout.addWidget(form_container, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # Submit
-        self.submit_btn = QPushButton("CONNECT DEVICE")
+        self.submit_btn = QPushButton("PAIR DEVICE")
         self.submit_btn.setFont(QFont(self.arcade_family, 14))
         self.submit_btn.setStyleSheet("""
             QPushButton {
@@ -91,7 +80,7 @@ class LoginScene(BaseScene):
             }
         """)
         self.submit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.submit_btn.clicked.connect(self.handle_login)
+        self.submit_btn.clicked.connect(self.handle_pairing)
         layout.addWidget(self.submit_btn, alignment=Qt.AlignmentFlag.AlignCenter)
         
         # Status
@@ -100,40 +89,35 @@ class LoginScene(BaseScene):
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.status_label)
         
-    def handle_login(self):
-        email = self.email_input.text().strip()
-        password = self.password_input.text()
-        pin = self.pin_input.text().strip()
+    def handle_pairing(self):
+        code = self.code_input.text().strip()
         
-        if not email or not password:
-            self.status_label.setText("Please enter email and password.")
-            return
-            
-        if len(pin) < 4 or not pin.isdigit():
-            self.status_label.setText("PIN must be at least 4 digits.")
+        if len(code) != 6 or not code.isdigit():
+            self.status_label.setText("Please enter a valid 6-digit number.")
             return
             
         self.submit_btn.setEnabled(False)
-        self.submit_btn.setText("CONNECTING...")
-        self.status_label.setText("")
+        self.submit_btn.setText("PAIRING...")
+        self.status_label.setText("Waiting for Parent Dashboard to confirm...")
+        self.status_label.setStyleSheet("color: #facc15;")
         
-        # Run in thread so UI doesn't freeze
-        threading.Thread(target=self._perform_login, args=(email, password, pin), daemon=True).start()
+        # Run pairing in thread so UI doesn't freeze during polling
+        threading.Thread(target=self._perform_pairing, args=(code,), daemon=True).start()
         
-    def _perform_login(self, email, password, pin):
-        success, err = login_with_email(email, password)
+    def _perform_pairing(self, code):
+        success, err = pair_device(code)
         
-        # Use QTimer to safely update UI from background thread
         if success:
-            QTimer.singleShot(0, lambda: self._on_login_success(pin))
+            QTimer.singleShot(0, self._on_pairing_success)
         else:
-            QTimer.singleShot(0, lambda: self._on_login_failure(err))
+            QTimer.singleShot(0, lambda: self._on_pairing_failure(err))
             
-    def _on_login_success(self, pin):
-        set_parent_pin(pin)
+    def _on_pairing_success(self):
         self.login_successful.emit()
         
-    def _on_login_failure(self, err):
+    def _on_pairing_failure(self, err):
         self.submit_btn.setEnabled(True)
-        self.submit_btn.setText("CONNECT DEVICE")
-        self.status_label.setText(f"Login Failed: {err}")
+        self.submit_btn.setText("PAIR DEVICE")
+        self.status_label.setText(f"Pairing Failed: {err}")
+        self.status_label.setStyleSheet("color: #ff3864;")
+

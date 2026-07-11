@@ -13,6 +13,17 @@ _KEYRING_SERVICE          = "SpellGate"
 _KEYRING_API_KEY          = "gemini_api_key"
 _KEYRING_FIREBASE_REFRESH_TOKEN = "firebase_refresh_token"
 _KEYRING_PARENT_PIN       = "parent_pin"
+_KEYRING_PARENT_UID       = "parent_uid"
+
+
+def get_parent_uid() -> str | None:
+    """Retrieves the paired parent UID from Windows Credential Manager."""
+    return keyring.get_password(_KEYRING_SERVICE, _KEYRING_PARENT_UID)
+
+def set_parent_uid(uid: str):
+    """Saves the paired parent UID to Windows Credential Manager."""
+    keyring.set_password(_KEYRING_SERVICE, _KEYRING_PARENT_UID, uid)
+
 
 
 # ─────────────────────────────────────────────────────────────
@@ -76,92 +87,132 @@ def set_local_pin(pin: str):
 
 
 # ─────────────────────────────────────────────────────────────
-#  TIME BANK INTEGRITY (Machine-bound HMAC)
+#  WINDOWS DPAPI (Data Protection API)
 # ─────────────────────────────────────────────────────────────
-def _sign_time(value: int) -> str:
-    """Create a SHA-256 HMAC signature for the time value."""
-    secret = _get_hmac_secret()
-    msg = str(value).encode()
-    return hmac.new(secret, msg, hashlib.sha256).hexdigest()
+import ctypes
+from ctypes import wintypes
 
+class DATA_BLOB(ctypes.Structure):
+    _fields_ = [
+        ("cbData", wintypes.DWORD),
+        ("pbData", ctypes.POINTER(ctypes.c_char))
+    ]
+
+def encrypt_dpapi(data: bytes) -> bytes:
+    """Encrypts bytes using Windows DPAPI (CryptProtectData)."""
+    try:
+        crypt32 = ctypes.windll.crypt32
+        kernel32 = ctypes.windll.kernel32
+    except AttributeError:
+        # Fallback for non-Windows platforms (e.g. testing)
+        return data
+
+    in_blob = DATA_BLOB(len(data), ctypes.create_string_buffer(data))
+    out_blob = DATA_BLOB()
+    # CRYPTPROTECT_UI_FORBIDDEN = 0x01
+    success = crypt32.CryptProtectData(
+        ctypes.byref(in_blob),
+        None, None, None, None,
+        0x01,
+        ctypes.byref(out_blob)
+    )
+    if not success:
+        raise ctypes.WinError()
+    
+    result = ctypes.string_at(out_blob.pbData, out_blob.cbData)
+    kernel32.LocalFree(out_blob.pbData)
+    return result
+
+def decrypt_dpapi(data: bytes) -> bytes:
+    """Decrypts bytes using Windows DPAPI (CryptUnprotectData)."""
+    try:
+        crypt32 = ctypes.windll.crypt32
+        kernel32 = ctypes.windll.kernel32
+    except AttributeError:
+        # Fallback for non-Windows platforms (e.g. testing)
+        return data
+
+    in_blob = DATA_BLOB(len(data), ctypes.create_string_buffer(data))
+    out_blob = DATA_BLOB()
+    # CRYPTPROTECT_UI_FORBIDDEN = 0x01
+    success = crypt32.CryptUnprotectData(
+        ctypes.byref(in_blob),
+        None, None, None, None,
+        0x01,
+        ctypes.byref(out_blob)
+    )
+    if not success:
+        raise ctypes.WinError()
+    
+    result = ctypes.string_at(out_blob.pbData, out_blob.cbData)
+    kernel32.LocalFree(out_blob.pbData)
+    return result
+
+
+# ─────────────────────────────────────────────────────────────
+#  TIME BANK INTEGRITY (DPAPI Encrypted)
+# ─────────────────────────────────────────────────────────────
 def secure_save_time(seconds: int, file_path=TIME_BANK_FILE):
-    """Saves time securely with a machine-bound HMAC signature."""
+    """Saves time securely encrypted with Windows DPAPI."""
     try:
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        sig = _sign_time(seconds)
-        with open(file_path, "w") as f:
-            f.write(f"{seconds}:{sig}")
+        data = str(seconds).encode("utf-8")
+        encrypted = encrypt_dpapi(data)
+        with open(file_path, "wb") as f:
+            f.write(encrypted)
     except Exception as e:
         print(f"[Security] Error saving time: {e}")
 
 def secure_load_time(file_path=TIME_BANK_FILE) -> int:
-    """Loads time and verifies its HMAC. Resets to 0 if tampered."""
+    """Loads time and decrypts it. Resets to 0 if tampered or decryption fails."""
     try:
-        with open(file_path, "r") as f:
-            content = f.read().strip()
-
-        if ":" not in content:
-            print("[Security] Unsigned time_bank.txt — resetting to 0.")
-            secure_save_time(0, file_path)
+        if not os.path.exists(file_path):
             return 0
-
-        value_str, sig = content.split(":", 1)
-        value = int(value_str)
-
-        if not hmac.compare_digest(_sign_time(value), sig):
-            print("[Security] TAMPER DETECTED in time_bank.txt! Resetting to 0.")
-            secure_save_time(0, file_path)
+        with open(file_path, "rb") as f:
+            encrypted = f.read()
+        if not encrypted:
             return 0
-
-        return value
+        decrypted = decrypt_dpapi(encrypted)
+        return int(decrypted.decode("utf-8"))
     except Exception:
+        print("[Security] DPAPI Decryption failed for time_bank.txt. Resetting to 0.")
+        secure_save_time(0, file_path)
         return 0
 
 
 # ─────────────────────────────────────────────────────────────
-#  PROGRESS DATA INTEGRITY (Machine-bound HMAC)
+#  PROGRESS DATA INTEGRITY (DPAPI Encrypted)
 # ─────────────────────────────────────────────────────────────
-def _hash_progress(data: dict) -> str:
-    """Create a SHA-256 HMAC signature for the JSON progress data."""
-    secret = _get_hmac_secret()
-    clean_data = {k: v for k, v in data.items() if k != '__hash__'}
-    content = json.dumps(clean_data, sort_keys=True)
-    return hmac.new(secret, content.encode('utf-8'), hashlib.sha256).hexdigest()
-
 def secure_save_progress(progress_data: dict, file_path=USER_PROGRESS_FILE):
-    """Saves the player's progress securely with a machine-bound HMAC signature."""
+    """Saves progress data securely encrypted with Windows DPAPI."""
     try:
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        save_data = dict(progress_data)
-        save_data['__hash__'] = _hash_progress(save_data)
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(save_data, f, indent=4)
+        clean_data = {k: v for k, v in progress_data.items() if k != '__hash__'}
+        data = json.dumps(clean_data).encode("utf-8")
+        encrypted = encrypt_dpapi(data)
+        with open(file_path, "wb") as f:
+            f.write(encrypted)
     except Exception as e:
         print(f"[Security] Error saving progress: {e}")
 
 def secure_load_progress(file_path=USER_PROGRESS_FILE) -> dict:
-    """Loads progress data and verifies its machine-bound HMAC signature."""
+    """Loads progress data and decrypts it. Resets to defaults if decryption fails."""
     fresh_progress = {
         "mastered_words": [],
         "learning_pool": {},
         "current_level": "Novice",
     }
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        stored_hash = data.pop('__hash__', None)
-
-        if stored_hash is None:
-            print("[Security] Unsigned user_progress.json — resetting.")
-            secure_save_progress(fresh_progress, file_path)
+        if not os.path.exists(file_path):
             return fresh_progress
-
-        if not hmac.compare_digest(_hash_progress(data), stored_hash):
-            print("[Security] TAMPER DETECTED in user_progress.json! Resetting.")
-            secure_save_progress(fresh_progress, file_path)
+        with open(file_path, "rb") as f:
+            encrypted = f.read()
+        if not encrypted:
             return fresh_progress
-
-        return data
-    except (FileNotFoundError, json.JSONDecodeError):
+        decrypted = decrypt_dpapi(encrypted)
+        return json.loads(decrypted.decode("utf-8"))
+    except Exception:
+        print("[Security] DPAPI Decryption failed for user_progress.json. Resetting.")
+        secure_save_progress(fresh_progress, file_path)
         return fresh_progress
+

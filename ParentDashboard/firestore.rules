@@ -2,28 +2,44 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── User data: only the verified owner can read/write ──
+    // Helper to check if the request is from the paired anonymous child device
+    function isPairedDevice(userId) {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(userId)/child_data/settings) &&
+             request.auth.uid == get(/databases/$(database)/documents/users/$(userId)/child_data/settings).data.paired_device_uid;
+    }
+
+    // ── User data: only the verified parent owner OR the paired child device can read/write ──
     match /users/{userId}/{document=**} {
       allow read, update, delete: if
-        request.auth != null &&
-        request.auth.uid == userId &&
-        request.auth.token.email_verified == true;
+        request.auth != null && (
+          (request.auth.uid == userId && request.auth.token.email_verified == true) ||
+          isPairedDevice(userId)
+        );
 
       allow create: if
         request.auth != null &&
         request.auth.uid == userId;
     }
 
-    // ── Pairing codes: anyone authenticated can create one (for their own uid only)
-    //    and anyone authenticated can read/delete one (to consume it from the Python app)
-    //    Python app uses service account which bypasses these rules entirely.
+    // ── Pairing codes: parents create/delete, child apps read/update to set device_uid
     match /pairing_codes/{code} {
       allow create: if
         request.auth != null &&
         request.resource.data.parent_uid == request.auth.uid;
-      // Reading/deleting codes is handled server-side by the Python service account
-      allow read, delete: if false;
+      
+      allow read: if
+        request.auth != null;
+        
+      allow update: if
+        request.auth != null &&
+        resource.data.device_uid == "";
+        
+      allow delete: if
+        request.auth != null &&
+        resource.data.parent_uid == request.auth.uid;
     }
 
   }
 }
+

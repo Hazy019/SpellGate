@@ -7,7 +7,7 @@ import {
   Sun, Moon, Brain, Menu, X
 } from 'lucide-react';
 import {
-  doc, onSnapshot, updateDoc, serverTimestamp
+  doc, onSnapshot, updateDoc, serverTimestamp, setDoc, deleteDoc
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { useAuth } from './AuthContext';
@@ -63,6 +63,11 @@ export default function Dashboard() {
   const [pinVisible, setPinVisible]       = useState(false);
   const [pinSaveStatus, setPinSaveStatus] = useState('idle'); // idle | saving | saved | error
   const [pinError, setPinError]           = useState('');
+
+  // ── Device pairing state ────────────────────────────────────
+  const [pairingCode, setPairingCode]       = useState('');
+  const [pairingLoading, setPairingLoading] = useState(false);
+  const [pairedDeviceStatus, setPairedDeviceStatus] = useState('unpaired'); // unpaired | pairing | paired
 
   // ── Live listener: child progress ──────────────────────────
   useEffect(() => {
@@ -167,6 +172,55 @@ export default function Dashboard() {
   async function handleLogout() {
     await logout();
     navigate('/login');
+  }
+
+  // ── Generate pairing code and listen for device intake ──────────
+  async function handleGeneratePairingCode() {
+    if (!uid) return;
+    setPairingLoading(true);
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setPairingCode(code);
+    setPairedDeviceStatus('pairing');
+    
+    try {
+      await setDoc(doc(db, 'pairing_codes', code), {
+        parent_uid: uid,
+        device_uid: '',
+        created_at: serverTimestamp()
+      });
+      
+      const unsub = onSnapshot(doc(db, 'pairing_codes', code), async (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.device_uid) {
+            // Child paired anonymously
+            await updateDoc(doc(db, 'users', uid, 'child_data', 'settings'), {
+              paired_device_uid: data.device_uid
+            });
+            await deleteDoc(doc(db, 'pairing_codes', code));
+            setPairedDeviceStatus('paired');
+            setPairingCode('');
+            unsub();
+          }
+        }
+      });
+      
+      // Auto-cleanup after 5 minutes
+      setTimeout(async () => {
+        try {
+          unsub();
+          await deleteDoc(doc(db, 'pairing_codes', code));
+          setPairingCode('');
+          setPairedDeviceStatus('unpaired');
+        } catch (e) {}
+      }, 300000);
+      
+    } catch (e) {
+      console.error("Pairing code generation failed:", e);
+      setPairedDeviceStatus('unpaired');
+    } finally {
+      setPairingLoading(false);
+    }
   }
 
   // ── Derived stats from live data ────────────────────────────
@@ -685,6 +739,62 @@ export default function Dashboard() {
                   {pinSaveStatus === 'saving' && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
                   {pinSaveStatus === 'saved' ? 'PIN Configured!' : pinSaveStatus === 'saving' ? 'Processing…' : 'Set Override PIN'}
                 </button>
+              </div>
+
+              {/* Secure Device Pairing Widget */}
+              <div className="glass rounded-xl p-6 border border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 col-span-1 lg:col-span-2">
+                <div className="space-y-1.5 md:max-w-xl text-left">
+                  <h2 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                    <Link2 className="w-5 h-5 text-neon" />
+                    Device Pairing
+                  </h2>
+                  <p className="text-text-muted text-xs leading-relaxed">
+                    Pair your child's PC client with this parent dashboard securely. 
+                    This registers the child's PC client as an authorized companion device without exposing your account password.
+                  </p>
+                </div>
+                
+                <div className="flex-shrink-0 bg-ink/40 border border-white/5 rounded-xl p-5 min-w-[280px] text-center flex flex-col items-center justify-center">
+                  {settingsData?.paired_device_uid ? (
+                    <div className="space-y-3">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-mint/10 border border-mint/20 text-mint text-xs font-bold uppercase tracking-wider">
+                        <CheckCircle className="w-3.5 h-3.5" /> Paired Successfully
+                      </div>
+                      <p className="text-[0.625rem] text-text-dim uppercase tracking-wider font-semibold">
+                        Device UID: {settingsData.paired_device_uid.slice(0, 12)}...
+                      </p>
+                      <button
+                        onClick={async () => {
+                          if (window.confirm("Are you sure you want to unpair this child device? The child's PC client will be locked out until re-paired.")) {
+                            await updateDoc(doc(db, 'users', uid, 'child_data', 'settings'), {
+                              paired_device_uid: null
+                            });
+                          }
+                        }}
+                        className="text-[0.6875rem] text-red-400 font-bold hover:underline cursor-pointer"
+                      >
+                        Unpair Device
+                      </button>
+                    </div>
+                  ) : pairingCode ? (
+                    <div className="space-y-2">
+                      <p className="text-[0.625rem] text-neon uppercase tracking-wider font-bold animate-pulse">Pairing Code Active</p>
+                      <span className="text-3xl font-mono font-black tracking-[0.25em] text-neon block">{pairingCode}</span>
+                      <p className="text-[0.5625rem] text-text-muted leading-normal">
+                        Enter this code on the child's PC client within 5 minutes.
+                      </p>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleGeneratePairingCode}
+                      disabled={pairingLoading}
+                      className="btn-primary press-effect w-full py-2.5 text-xs font-bold bg-gradient-to-r from-neon to-cyber-purple text-ink border-none shadow-sm cursor-pointer"
+                    >
+                      {pairingLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />}
+                      Generate Pairing Code
+                    </button>
+                  )}
+                </div>
               </div>
 
             </div>

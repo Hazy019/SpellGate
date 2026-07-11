@@ -33,24 +33,23 @@ def init_firebase():
     Initialize Firebase using the stored Refresh Token.
     Returns True if successful, False if no token or login required.
     """
-    from modules.security import get_firebase_refresh_token
+    from modules.security import get_firebase_refresh_token, get_parent_uid
     refresh_token = get_firebase_refresh_token()
+    parent_uid = get_parent_uid()
     
-    if not refresh_token:
-        print("[Firebase] No refresh token found. User must log in.")
+    if not refresh_token or not parent_uid:
+        print("[Firebase] Device is not paired yet.")
         return False
         
-    return _refresh_and_init(refresh_token)
+    return _refresh_and_init(refresh_token, parent_uid)
 
-def login_with_email(email, password):
+def sign_in_anonymously():
     """
-    Log in using Email and Password via Firebase Auth REST API.
-    Returns (True, None) on success, (False, error_msg) on failure.
+    Signs in anonymously via Firebase Auth REST API.
+    Returns (True, data) on success, (False, error_msg) on failure.
     """
-    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API_KEY}"
+    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={FIREBASE_API_KEY}"
     payload = {
-        "email": email,
-        "password": password,
         "returnSecureToken": True
     }
     
@@ -61,22 +60,83 @@ def login_with_email(email, password):
         if "error" in data:
             return False, data["error"].get("message", "Unknown error")
             
-        id_token = data["idToken"]
-        refresh_token = data["refreshToken"]
-        local_id = data["localId"]
+        return True, data
+    except Exception as e:
+        return False, str(e)
+
+def pair_device(pairing_code: str) -> tuple[bool, str | None]:
+    """
+    Pairs the local device with the Parent Dashboard using a 6-digit code.
+    1. signs in anonymously
+    2. reads pairing code mapping to find parent_uid
+    3. updates pairing code mapping to register this device's anonymous UID
+    4. polls the parent's settings document to confirm connection.
+    """
+    success, auth_data = sign_in_anonymously()
+    if not success:
+        return False, f"Anonymous Auth failed: {auth_data}"
         
-        from modules.security import set_firebase_refresh_token
+    id_token = auth_data["idToken"]
+    refresh_token = auth_data["refreshToken"]
+    device_uid = auth_data["localId"]
+    
+    cred = credentials.Credentials(token=id_token)
+    temp_db = firestore.Client(project=FIREBASE_PROJECT_ID, credentials=cred)
+    
+    try:
+        pairing_ref = temp_db.collection("pairing_codes").document(pairing_code)
+        doc = pairing_ref.get()
+        if not doc.exists:
+            return False, "Invalid or expired pairing code."
+            
+        parent_uid = doc.to_dict().get("parent_uid")
+        if not parent_uid:
+            return False, "Pairing code has no parent associated with it."
+            
+        # Register child UID on pairing code doc
+        pairing_ref.update({"device_uid": device_uid})
+        print(f"[Firebase] Registered device UID {device_uid} on pairing code {pairing_code}")
+        
+        # Poll settings for confirmation
+        settings_ref = (
+            temp_db.collection("users")
+                   .document(parent_uid)
+                   .collection("child_data")
+                   .document("settings")
+        )
+        
+        paired = False
+        for _ in range(30):
+            try:
+                settings_doc = settings_ref.get()
+                if settings_doc.exists:
+                    paired = True
+                    break
+            except Exception:
+                pass
+            time.sleep(1)
+            
+        if not paired:
+            return False, "Pairing timed out. Make sure you paired on the dashboard."
+            
+        # Cache local credentials
+        from modules.security import set_firebase_refresh_token, set_parent_uid
         set_firebase_refresh_token(refresh_token)
+        set_parent_uid(parent_uid)
         
-        _init_firestore_client(id_token, local_id)
-        _schedule_token_refresh(refresh_token, int(data.get("expiresIn", 3600)))
+        # Init global state
+        global _db, _parent_uid
+        _parent_uid = parent_uid
+        _db = temp_db
+        
+        _schedule_token_refresh(refresh_token, int(auth_data.get("expiresIn", 3600)))
         register_app_install()
         return True, None
         
     except Exception as e:
         return False, str(e)
 
-def _refresh_and_init(refresh_token):
+def _refresh_and_init(refresh_token, parent_uid):
     """Exchanges a refresh token for a new ID token and initializes Firestore."""
     url = f"https://securetoken.googleapis.com/v1/token?key={FIREBASE_API_KEY}"
     payload = {
@@ -94,12 +154,11 @@ def _refresh_and_init(refresh_token):
             
         id_token = data["id_token"]
         new_refresh_token = data["refresh_token"]
-        local_id = data["user_id"]
         
         from modules.security import set_firebase_refresh_token
         set_firebase_refresh_token(new_refresh_token)
         
-        _init_firestore_client(id_token, local_id)
+        _init_firestore_client(id_token, parent_uid)
         _schedule_token_refresh(new_refresh_token, int(data.get("expires_in", 3600)))
         return True
         
@@ -107,12 +166,12 @@ def _refresh_and_init(refresh_token):
         print(f"[Firebase] Failed to refresh token: {e}")
         return False
 
-def _init_firestore_client(id_token, uid):
+def _init_firestore_client(id_token, parent_uid):
     global _db, _parent_uid
-    _parent_uid = uid
+    _parent_uid = parent_uid
     cred = credentials.Credentials(token=id_token)
     _db = firestore.Client(project=FIREBASE_PROJECT_ID, credentials=cred)
-    print(f"[Firebase] [OK] Initialized Firestore for user: {uid}")
+    print(f"[Firebase] [OK] Initialized Firestore for parent: {parent_uid}")
 
 def _schedule_token_refresh(refresh_token, expires_in):
     global _token_refresh_timer
@@ -121,7 +180,7 @@ def _schedule_token_refresh(refresh_token, expires_in):
         
     # Refresh 5 minutes before expiry
     refresh_delay = max(0, expires_in - 300)
-    _token_refresh_timer = threading.Timer(refresh_delay, _refresh_and_init, args=(refresh_token,))
+    _token_refresh_timer = threading.Timer(refresh_delay, _refresh_and_init, args=(refresh_token, _parent_uid))
     _token_refresh_timer.daemon = True
     _token_refresh_timer.start()
 
