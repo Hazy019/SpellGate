@@ -28,8 +28,12 @@ service cloud.firestore {
         request.auth != null &&
         request.resource.data.parent_uid == request.auth.uid;
       
-      allow read: if
+      allow get: if
         request.auth != null;
+        
+      allow list: if
+        request.auth != null &&
+        resource.data.parent_uid == request.auth.uid;
         
       allow update: if
         request.auth != null &&

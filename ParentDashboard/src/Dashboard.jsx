@@ -4,7 +4,7 @@ import {
   Activity, Settings, User, LogOut, Clock, Award, AlertCircle,
   Save, Wifi, WifiOff, Link2, Unlock, RefreshCw, CheckCircle,
   Eye, EyeOff, Key, ShieldCheck, Laptop, Cpu, ShieldAlert, MonitorPlay,
-  Sun, Moon, Brain, Menu, X
+  Sun, Moon, Brain, Menu, X, Mail
 } from 'lucide-react';
 import {
   doc, onSnapshot, updateDoc, serverTimestamp, setDoc, deleteDoc
@@ -81,7 +81,7 @@ function SpellGateLogo({ size = 24, withHex = true }) {
 }
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
+  const { user, logout, resendVerification } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const uid = user?.uid;
@@ -280,6 +280,83 @@ export default function Dashboard() {
   // Calculate online status (heartbeat active in last 3 minutes)
   const lastHeartbeat = deviceData?.last_heartbeat?.toDate() ?? null;
   const isDeviceOnline = lastHeartbeat && (new Date() - lastHeartbeat) < 180000;
+
+  // If email verification is required by security rules, block dashboard access until verified
+  if (user && !user.emailVerified) {
+    return (
+      <div className="min-h-screen bg-ink text-text-primary font-sans flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        {/* Subtle matrix background */}
+        <div 
+          className="absolute inset-0 pointer-events-none opacity-[0.03] z-0" 
+          style={{ background: 'radial-gradient(rgba(255,255,255,0.8) 1px, transparent 1px) 0 0 / 24px 24px' }}
+        />
+        
+        <div className="relative z-10 w-full max-w-md glass-hi rounded-2xl p-8 border border-white/5 text-center flex flex-col gap-6">
+          <div className="w-16 h-16 rounded-2xl bg-cyber-purple/10 border border-cyber-purple/20 text-cyber-purple flex items-center justify-center mx-auto">
+            <Mail className="w-8 h-8" />
+          </div>
+          
+          <div>
+            <h1 className="text-xl font-bold font-display tracking-tight text-white mb-2">Verify Your Email</h1>
+            <p className="text-xs text-text-muted leading-relaxed">
+              To secure your child's remote administration controls, we require a verified email address. 
+              We've sent a verification link to:
+            </p>
+            <p className="text-xs font-semibold text-neon font-mono mt-1">{user.email}</p>
+          </div>
+          
+          {pinSaveStatus === 'sending' && (
+            <p className="text-xs text-mint">Verification link sent! Check your inbox.</p>
+          )}
+          {pinError && (
+            <p className="text-xs text-crimson">{pinError}</p>
+          )}
+
+          <div className="flex flex-col gap-3">
+            <button 
+              onClick={async () => {
+                setPinError('');
+                setPinSaveStatus('idle');
+                try {
+                  await resendVerification();
+                  setPinSaveStatus('sending');
+                } catch (e) {
+                  setPinError('Failed to send verification email. Try again shortly.');
+                }
+              }}
+              className="btn-primary w-full py-2.5"
+            >
+              Resend Verification Link
+            </button>
+            
+            <button 
+              onClick={async () => {
+                setPinError('');
+                try {
+                  // Reload the user profile from Firebase auth backend
+                  await auth.currentUser.reload();
+                  // Force React state update by reloading
+                  window.location.reload(); 
+                } catch (e) {
+                  setPinError('Failed to refresh status. Try again.');
+                }
+              }}
+              className="btn-ghost w-full py-2.5"
+            >
+              I have verified my email (Reload)
+            </button>
+          </div>
+          
+          <button 
+            onClick={handleLogout}
+            className="text-xs text-text-muted hover:text-white underline transition-colors"
+          >
+            Back to Sign In
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-ink text-text-primary font-sans flex flex-col md:flex-row relative overflow-hidden">
