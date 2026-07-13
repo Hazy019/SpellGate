@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Rocket, Mail, Lock, AlertCircle, CheckCircle, Loader,
-  Eye, EyeOff, ArrowLeft, Shield, Sun, Moon
+  Eye, EyeOff, ArrowLeft, Shield, Sun, Moon, X
 } from 'lucide-react';
 import { useTheme } from './ThemeContext';
 
@@ -63,6 +63,115 @@ function Alert({ type, msg }) {
 }
 
 /* ─────────────────────────────────────────────────────
+   SPELLGATE LOGO COMPONENT
+   Unified retro arcade/gateway branding.
+───────────────────────────────────────────────────── */
+function SpellGateLogo({ size = 24, withHex = true }) {
+  return (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      viewBox="0 0 48 48" 
+      width={size} 
+      height={size} 
+      fill="none"
+    >
+      {withHex && (
+        <path 
+          d="M 24 3 L 43 14 L 43 34 L 24 45 L 5 34 L 5 14 Z" 
+          stroke="var(--neon)" 
+          strokeWidth="2.5" 
+          strokeLinejoin="round" 
+          fill="var(--input-bg)" 
+        />
+      )}
+      
+      {/* Lintel (Top Bar) */}
+      <path d="M 13 16 L 35 16 L 35 19 L 34 19 L 34 18 L 14 18 L 14 19 L 13 19 Z" fill="var(--neon)" />
+      {/* Left Pillar */}
+      <rect x="16" y="18" width="3" height="15" fill="var(--neon)" />
+      <rect x="14" y="33" width="7" height="2" fill="var(--neon)" />
+      {/* Right Pillar */}
+      <rect x="29" y="18" width="3" height="15" fill="var(--neon)" />
+      <rect x="27" y="33" width="7" height="2" fill="var(--neon)" />
+      {/* Hanging Sign */}
+      <rect x="20" y="19" width="8" height="9" fill="var(--surface)" stroke="var(--neon)" strokeWidth="1.5" rx="1" />
+      {/* Inner Key/Core */}
+      <rect x="23" y="22" width="2" height="4" fill="var(--crimson)" rx="0.5" />
+    </svg>
+  );
+}
+
+/* ─────────────────────────────────────────────────────
+   LEGAL MODAL COMPONENT
+   Written to be warm, clear, and human-centered.
+───────────────────────────────────────────────────── */
+function LegalModal({ isOpen, onClose, title, children }) {
+  React.useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="relative w-full max-w-lg bg-cyber-dark border border-white/10 rounded-2xl shadow-2xl p-6 md:p-8 flex flex-col max-h-[85vh] animate-slide-up"
+        style={{
+          background: 'var(--surface)',
+          borderColor: 'var(--border-hi)',
+          color: 'var(--text-primary)'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-white/5 pb-4">
+          <h3 className="text-lg font-bold tracking-tight font-display text-brand" style={{
+            background: 'linear-gradient(135deg, var(--neon) 20%, #80f0ff 80%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>
+            {title}
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-text-muted hover:text-text-primary transition-colors cursor-pointer p-1"
+            aria-label="Close dialog"
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)' }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Scrollable Body */}
+        <div className="overflow-y-auto mt-4 pr-1 text-sm leading-relaxed text-text-muted space-y-4">
+          {children}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-white/5 pt-4 mt-6 flex justify-end">
+          <button onClick={onClose} className="btn-primary" style={{ padding: '0.45rem 1.25rem', fontSize: '0.8125rem' }}>
+            Got it, thanks
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────
    MAIN LOGIN COMPONENT
 ───────────────────────────────────────────────────── */
 export default function Login() {
@@ -80,6 +189,8 @@ export default function Login() {
   const [success, setSuccess]   = useState('');
   const [loading, setLoading]   = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   const strength = mode === 'register' ? getPasswordStrength(password) : null;
   const passwordsMatch = password === confirm;
@@ -276,7 +387,8 @@ export default function Login() {
      RENDER: Login / Register form
   ───────────────────────────────────────────────── */
   return (
-    <LoginLayout>
+    <>
+      <LoginLayout>
       {/* Tab toggle */}
       <div
         className="flex p-1 mb-8 rounded-[10px]"
@@ -465,9 +577,9 @@ export default function Login() {
             </div>
             <span className="text-xs text-muted leading-relaxed">
               I agree to the{' '}
-              <a href="/privacy" className="policy-link" onClick={e => e.stopPropagation()}>Privacy Policy</a>
+              <button type="button" className="policy-link" style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'var(--neon)', cursor: 'pointer', borderBottom: '1px solid transparent' }} onClick={e => { e.stopPropagation(); setShowPrivacyModal(true); }}>Privacy Policy</button>
               {' '}and{' '}
-              <a href="/terms" className="policy-link" onClick={e => e.stopPropagation()}>Terms of Service</a>.
+              <button type="button" className="policy-link" style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'var(--neon)', cursor: 'pointer', borderBottom: '1px solid transparent' }} onClick={e => { e.stopPropagation(); setShowTermsModal(true); }}>Terms of Service</button>.
               SpellGate never sells or shares your data.
             </span>
           </label>
@@ -522,9 +634,66 @@ export default function Login() {
         Secured by Firebase Authentication · Email verification required
       </p>
 
-      {/* Forgot password screen — inline */}
-      {mode === 'forgot' && <ForgotPasswordOverlay onBack={() => switchMode('login')} />}
     </LoginLayout>
+
+    {/* Overlays rendered outside to escape the card backdrop-filter block */}
+    {mode === 'forgot' && <ForgotPasswordOverlay onBack={() => switchMode('login')} />}
+
+    {/* Inline Legal Modals */}
+    <LegalModal isOpen={showPrivacyModal} onClose={() => setShowPrivacyModal(false)} title="Privacy Policy">
+      <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Our Privacy Promise</p>
+      <p>
+        We built SpellGate because we believe technology should help kids learn, not track them.
+        We do not sell, rent, share, or monetize your or your child's data. Ever.
+      </p>
+      <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>What We Collect & Sync</p>
+      <ul style={{ listStyle: 'disc', paddingLeft: '1.25rem', spaceY: '0.25rem' }}>
+        <li>
+          <strong>Spelling Progress</strong>: We log the words your child spells correctly, their accuracy rates,
+          and session durations. This is sent to your private database so you can monitor them here.
+        </li>
+        <li>
+          <strong>Time Bank State</strong>: We sync the amount of unlocked screen time they have earned so the child client knows when to lock again.
+        </li>
+      </ul>
+      <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>What Stays 100% Local</p>
+      <p>
+        To prevent bypassing the lock screen, the Windows app monitors keyboard shortcuts (like Alt+Tab and Task Manager keys)
+        only when locking is active. This monitoring happens entirely on your child's PC. No keys are ever recorded, saved, or transmitted.
+      </p>
+      <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>Self-Hosted Data Ownership</p>
+      <p>
+        All synchronized data is stored directly in your own Firebase project. Only you—authenticated with your verified parent credentials—have permissions to access or edit this data.
+      </p>
+    </LegalModal>
+
+    <LegalModal isOpen={showTermsModal} onClose={() => setShowTermsModal(false)} title="Terms of Service">
+      <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Welcome to SpellGate</p>
+      <p>
+        By using SpellGate, you agree to these simple terms. We keep them short and clear because we respect your time.
+      </p>
+      <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>1. Parental Supervision</p>
+      <p>
+        SpellGate is a parental assistance tool. You determine the curriculum, set the play multipliers, and control the override passcodes.
+        It is your responsibility to monitor your child's use.
+      </p>
+      <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>2. OS-Level Device Controls</p>
+      <p>
+        The desktop app requires system-level permissions to hook keyboard shortcuts (Alt+Tab, Win keys) and manage Windows session state.
+        By installing, you authorize the app to lock the screen and restrict access based on active spelling tasks.
+      </p>
+      <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>3. Emergency Overrides</p>
+      <p>
+        We include a fail-safe parent passcode override shortcut (default: <kbd style={{ background: 'var(--input-bg)', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border-hi)' }}>Ctrl+Shift+P</kbd>).
+        You agree to keep this passcode secure from your child.
+      </p>
+      <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>4. Free, Clean, Open Source</p>
+      <p>
+        SpellGate is open-source under the GPLv3 license. It contains zero ads, zero tracking scripts, and zero subscription fees.
+        You are free to compile the source code yourself.
+      </p>
+    </LegalModal>
+    </>
   );
 }
 
@@ -565,12 +734,7 @@ function LoginLayout({ children }) {
         
         {/* Brand Header */}
         <Link to="/" className="inline-flex items-center gap-2.5 group" aria-label="Back to SpellGate home">
-          <div
-            className="w-9 h-9 logo-hex flex items-center justify-center"
-            style={{ background: 'var(--neon)' }}
-          >
-            <Rocket size={16} style={{ color: 'var(--ink-static, #08090d)' }} />
-          </div>
+          <SpellGateLogo size={36} />
           <span
             className="font-display text-base font-bold tracking-[0.18em] uppercase text-neon"
           >
@@ -627,9 +791,7 @@ function LoginLayout({ children }) {
           {/* Logo (Visible only on mobile screen widths) */}
           <div className="text-center md:hidden mb-2">
             <Link to="/" className="inline-flex items-center gap-2 mb-3" aria-label="Back to home">
-              <div className="w-8 h-8 logo-hex bg-neon flex items-center justify-center">
-                <Rocket size={15} className="text-ink" />
-              </div>
+              <SpellGateLogo size={32} />
               <span className="font-display font-bold tracking-wider text-neon uppercase text-sm">SpellGate</span>
             </Link>
             <p className="text-xs font-semibold text-text-muted uppercase tracking-wider opacity-60">Parent Portal</p>

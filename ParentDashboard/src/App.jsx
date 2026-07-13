@@ -110,7 +110,10 @@ function FeatureCard({ icon, color, bg, title, body, delay = 0 }) {
       style={{ 
         animationDelay: `${delay}ms`, 
         borderColor: color + '22',
-        transition: 'border-color 0.3s, box-shadow 0.3s, transform 0.4s cubic-bezier(0.34,1.56,0.64,1)'
+        transition: 'border-color 0.3s, box-shadow 0.3s, transform 0.4s cubic-bezier(0.34,1.56,0.64,1)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%'
       }}
     >
       <div 
@@ -125,7 +128,7 @@ function FeatureCard({ icon, color, bg, title, body, delay = 0 }) {
         {React.cloneElement(icon, { size: 20 })}
       </div>
       <h3 className="text-sm font-bold mb-2 tracking-tight" style={{ color: 'var(--text-primary)' }}>{title}</h3>
-      <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>{body}</p>
+      <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)', flexGrow: 1 }}>{body}</p>
     </div>
   );
 }
@@ -166,6 +169,110 @@ function FaqItem({ q, a }) {
 }
 
 /* ─────────────────────────────────────────────────────
+   SPELLGATE LOGO COMPONENT
+   Unified retro arcade/gateway branding.
+───────────────────────────────────────────────────── */
+function SpellGateLogo({ size = 24, withHex = true }) {
+  return (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      viewBox="0 0 48 48" 
+      width={size} 
+      height={size} 
+      fill="none"
+    >
+      {withHex && (
+        <path 
+          d="M 24 3 L 43 14 L 43 34 L 24 45 L 5 34 L 5 14 Z" 
+          stroke="var(--neon)" 
+          strokeWidth="2.5" 
+          strokeLinejoin="round" 
+          fill="var(--input-bg)" 
+        />
+      )}
+      
+      {/* Lintel (Top Bar) */}
+      <path d="M 13 16 L 35 16 L 35 19 L 34 19 L 34 18 L 14 18 L 14 19 L 13 19 Z" fill="var(--neon)" />
+      {/* Left Pillar */}
+      <rect x="16" y="18" width="3" height="15" fill="var(--neon)" />
+      <rect x="14" y="33" width="7" height="2" fill="var(--neon)" />
+      {/* Right Pillar */}
+      <rect x="29" y="18" width="3" height="15" fill="var(--neon)" />
+      <rect x="27" y="33" width="7" height="2" fill="var(--neon)" />
+      {/* Hanging Sign */}
+      <rect x="20" y="19" width="8" height="9" fill="var(--surface)" stroke="var(--neon)" strokeWidth="1.5" rx="1" />
+      {/* Inner Key/Core */}
+      <rect x="23" y="22" width="2" height="4" fill="var(--crimson)" rx="0.5" />
+    </svg>
+  );
+}
+
+/* ─────────────────────────────────────────────────────
+   LEGAL MODAL COMPONENT
+   Written to be warm, clear, and human-centered.
+───────────────────────────────────────────────────── */
+function LegalModal({ isOpen, onClose, title, children }) {
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="relative w-full max-w-lg bg-cyber-dark border border-white/10 rounded-2xl shadow-2xl p-6 md:p-8 flex flex-col max-h-[85vh] animate-slide-up"
+        style={{
+          background: 'var(--surface)',
+          borderColor: 'var(--border-hi)',
+          color: 'var(--text-primary)'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-white/5 pb-4">
+          <h3 className="text-lg font-bold tracking-tight font-display text-brand">
+            {title}
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-text-muted hover:text-text-primary transition-colors cursor-pointer p-1"
+            aria-label="Close dialog"
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)' }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Scrollable Body */}
+        <div className="overflow-y-auto mt-4 pr-1 text-sm leading-relaxed text-text-muted space-y-4">
+          {children}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-white/5 pt-4 mt-6 flex justify-end">
+          <button onClick={onClose} className="btn-primary" style={{ padding: '0.45rem 1.25rem', fontSize: '0.8125rem' }}>
+            Got it, thanks
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────
    MAIN APP
 ───────────────────────────────────────────────────── */
 const App = () => {
@@ -175,6 +282,8 @@ const App = () => {
   const [downloading, setDownloading]       = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled]             = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const [terminalLogs, setTerminalLogs]     = useState([
     '[INIT] System monitor listening on child PC...',
     '[INFO] Host name detected: CHILD-PC',
@@ -286,9 +395,7 @@ const App = () => {
         <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyBetween: 'space-between' }}>
           {/* Logo */}
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', textDecoration: 'none' }} aria-label="SpellGate Home">
-            <div className="logo-hex" style={{ width: 34, height: 34, background: neon, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Rocket size={15} style={{ color: 'var(--ink-static, #08090d)' }} />
-            </div>
+            <SpellGateLogo size={34} />
             <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 850, letterSpacing: '0.2em', textTransform: 'uppercase', color: neon }}>SpellGate</span>
           </Link>
 
@@ -434,8 +541,8 @@ const App = () => {
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(255,95,87,0.5)', display: 'inline-block' }} />
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(254,188,46,0.5)', display: 'inline-block' }} />
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(40,200,64,0.5)', display: 'inline-block' }} />
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.625rem', color: dim, flex: 1, textAlign: 'center', letterSpacing: '0.04em' }}>spellgate-console · parent-portal-sync</span>
-                <Lock size={11} style={{ color: 'var(--mint)' }} />
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.625rem', color: 'rgba(255,255,255,0.4)', flex: 1, textAlign: 'center', letterSpacing: '0.04em' }}>spellgate-console · parent-portal-sync</span>
+                <Lock size={11} style={{ color: '#3dffa0' }} />
               </div>
 
               {/* Grid Content inside Mock Window */}
@@ -451,15 +558,15 @@ const App = () => {
                       { label: 'Time Bank', val: '12m 40s', clr: '#3dffa0', bg: 'rgba(61,255,160,0.05)' }
                     ].map(card => (
                       <div key={card.label} className="rounded-lg p-3 text-left border border-white/5" style={{ background: card.bg, borderColor: card.clr + '15' }}>
-                        <span style={{ fontSize: '0.625rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{card.label}</span>
+                        <span style={{ fontSize: '0.625rem', fontWeight: 600, color: 'rgba(255,255,255,0.45)', display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{card.label}</span>
                         <span style={{ fontSize: '0.9375rem', fontWeight: 800, color: card.clr, fontFamily: 'var(--font-mono)' }}>{card.val}</span>
                       </div>
                     ))}
                   </div>
 
                   {/* Gorgeous visual SVG progress chart */}
-                  <div className="rounded-lg p-4 flex-1 border border-white/5 bg-ink/30 flex flex-col justify-between">
-                    <span className="text-[0.625rem] font-bold text-text-muted text-left uppercase tracking-wider">Mastery Velocity</span>
+                  <div className="rounded-lg p-4 flex-1 border border-white/5 bg-ink/30 flex flex-col justify-between" style={{ background: 'rgba(0,0,0,0.2)' }}>
+                    <span className="text-[0.625rem] font-bold text-left uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.45)' }}>Mastery Velocity</span>
                     <div style={{ height: '110px', width: '100%', position: 'relative', marginTop: 10 }}>
                       <svg viewBox="0 0 100 35" width="100%" height="100%" preserveAspectRatio="none">
                         <defs>
@@ -479,11 +586,11 @@ const App = () => {
                 {/* Simulated Live Terminal Right Column (2/5 width) */}
                 <div className="md:col-span-2 rounded-lg bg-black/60 border border-white/5 p-4 flex flex-col font-mono text-left relative">
                   <div className="absolute top-2.5 right-3.5 flex items-center gap-1.5">
-                    <Terminal size={10} className="text-neon" />
-                    <span className="text-[0.5625rem] font-bold text-text-dim tracking-wider uppercase">Live Output</span>
+                    <Terminal size={10} style={{ color: '#00e5ff' }} />
+                    <span className="text-[0.5625rem] font-bold tracking-wider uppercase" style={{ color: 'rgba(255,255,255,0.35)' }}>Live Output</span>
                   </div>
-                  <h4 className="text-[0.625rem] font-bold text-text-muted mb-3 uppercase tracking-wider">Device Log Terminal</h4>
-                  <div className="flex-1 flex flex-col gap-1.5 overflow-hidden text-[0.6875rem] text-mint">
+                  <h4 className="text-[0.625rem] font-bold mb-3 uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.45)' }}>Device Log Terminal</h4>
+                  <div className="flex-1 flex flex-col gap-1.5 overflow-hidden text-[0.6875rem] text-[#3dffa0]">
                     {terminalLogs.map((log, index) => (
                       <div key={index} className="truncate opacity-90 border-l border-neon/20 pl-2">
                         {log}
@@ -526,7 +633,7 @@ const App = () => {
             </h2>
             <p style={{ color: muted, maxWidth: '580px', margin: '0 auto', lineHeight: 1.65, fontSize: '0.875rem' }}>Every system component was engineered to incentivize vocabulary development while enforcing strict system boundaries.</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {FEATURES.map((f, i) => <FeatureCard key={i} {...f} delay={i * 60} />)}
           </div>
         </div>
@@ -583,8 +690,8 @@ const App = () => {
             </ul>
             <p style={{ fontSize: '0.6875rem', color: dim, marginTop: '2rem' }}>
               For legal frameworks see our{' '}
-              <a href="/privacy" className="policy-link">Privacy Policy</a>{' '}and{' '}
-              <a href="/terms" className="policy-link">Terms of Service</a>.
+              <button onClick={() => setShowPrivacyModal(true)} className="policy-link" style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'var(--neon)', cursor: 'pointer', borderBottom: '1px solid transparent' }}>Privacy Policy</button>{' '}and{' '}
+              <button onClick={() => setShowTermsModal(true)} className="policy-link" style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'var(--neon)', cursor: 'pointer', borderBottom: '1px solid transparent' }}>Terms of Service</button>.
             </p>
           </div>
           <div className="reveal glass-hi" style={{ borderRadius: 16, padding: '1.75rem', boxShadow: '0 24px 64px -16px rgba(61,255,160,0.04)', border: '1px solid rgba(61,255,160,0.15)' }}>
@@ -625,9 +732,7 @@ const App = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '2.5rem', marginBottom: '3.5rem' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.75rem' }}>
-                <div className="logo-hex" style={{ width: 30, height: 30, background: neon, display: 'flex', alignItems: 'center', justifyCenter: 'center', justifyContent: 'center' }}>
-                  <Rocket size={13} style={{ color: '#08090d' }} />
-                </div>
+                <SpellGateLogo size={30} />
                 <span style={{ fontFamily: 'var(--font-display)', fontWeight: 850, fontSize: '0.8125rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: neon }}>SpellGate</span>
               </div>
               <p style={{ fontSize: '0.75rem', color: muted, lineHeight: 1.6, margin: '0 0 1.25rem' }}>A curriculum-focused utility that turns screen access limits into constructive spelling study incentives.</p>
@@ -657,10 +762,14 @@ const App = () => {
             <div>
               <p style={{ fontSize: '0.625rem', fontWeight: 750, letterSpacing: '0.1em', textTransform: 'uppercase', color: dim, marginBottom: '0.85rem' }}>Security & Legal</p>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-                {[{ href: '/privacy', label: 'Privacy Policy' }, { href: '/terms', label: 'Terms of Service' }].map(l => (
-                  <li key={l.href}><a href={l.href} style={{ fontSize: '0.75rem', color: muted, textDecoration: 'none', transition: 'color 0.2s', fontWeight: 550 }}
-                    onMouseEnter={e => e.target.style.color = txt} onMouseLeave={e => e.target.style.color = muted}>{l.label}</a></li>
-                ))}
+                <li>
+                  <button onClick={() => setShowPrivacyModal(true)} style={{ background: 'none', border: 'none', padding: 0, fontSize: '0.75rem', color: muted, textDecoration: 'none', transition: 'color 0.2s', fontWeight: 550, cursor: 'pointer', textAlign: 'left' }}
+                    onMouseEnter={e => e.target.style.color = txt} onMouseLeave={e => e.target.style.color = muted}>Privacy Policy</button>
+                </li>
+                <li>
+                  <button onClick={() => setShowTermsModal(true)} style={{ background: 'none', border: 'none', padding: 0, fontSize: '0.75rem', color: muted, textDecoration: 'none', transition: 'color 0.2s', fontWeight: 550, cursor: 'pointer', textAlign: 'left' }}
+                    onMouseEnter={e => e.target.style.color = txt} onMouseLeave={e => e.target.style.color = muted}>Terms of Service</button>
+                </li>
               </ul>
             </div>
           </div>
@@ -670,6 +779,61 @@ const App = () => {
           </div>
         </div>
       </footer>
+
+      {/* Reusable Legal Modals containing clear human copy */}
+      <LegalModal isOpen={showPrivacyModal} onClose={() => setShowPrivacyModal(false)} title="Privacy Policy">
+        <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Our Privacy Promise</p>
+        <p>
+          We built SpellGate because we believe technology should help kids learn, not track them.
+          We do not sell, rent, share, or monetize your or your child's data. Ever.
+        </p>
+        <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>What We Collect & Sync</p>
+        <ul style={{ listStyle: 'disc', paddingLeft: '1.25rem', spaceY: '0.25rem' }}>
+          <li>
+            <strong>Spelling Progress</strong>: We log the words your child spells correctly, their accuracy rates,
+            and session durations. This is sent to your private database so you can monitor them here.
+          </li>
+          <li>
+            <strong>Time Bank State</strong>: We sync the amount of unlocked screen time they have earned so the child client knows when to lock again.
+          </li>
+        </ul>
+        <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>What Stays 100% Local</p>
+        <p>
+          To prevent bypassing the lock screen, the Windows app monitors keyboard shortcuts (like Alt+Tab and Task Manager keys)
+          only when locking is active. This monitoring happens entirely on your child's PC. No keys are ever recorded, saved, or transmitted.
+        </p>
+        <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>Self-Hosted Data Ownership</p>
+        <p>
+          All synchronized data is stored directly in your own Firebase project. Only you—authenticated with your verified parent credentials—have permissions to access or edit this data.
+        </p>
+      </LegalModal>
+
+      <LegalModal isOpen={showTermsModal} onClose={() => setShowTermsModal(false)} title="Terms of Service">
+        <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Welcome to SpellGate</p>
+        <p>
+          By using SpellGate, you agree to these simple terms. We keep them short and clear because we respect your time.
+        </p>
+        <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>1. Parental Supervision</p>
+        <p>
+          SpellGate is a parental assistance tool. You determine the curriculum, set the play multipliers, and control the override passcodes.
+          It is your responsibility to monitor your child's use.
+        </p>
+        <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>2. OS-Level Device Controls</p>
+        <p>
+          The desktop app requires system-level permissions to hook keyboard shortcuts (Alt+Tab, Win keys) and manage Windows session state.
+          By installing, you authorize the app to lock the screen and restrict access based on active spelling tasks.
+        </p>
+        <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>3. Emergency Overrides</p>
+        <p>
+          We include a fail-safe parent passcode override shortcut (default: <kbd style={{ background: 'var(--input-bg)', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border-hi)' }}>Ctrl+Shift+P</kbd>).
+          You agree to keep this passcode secure from your child.
+        </p>
+        <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>4. Free, Clean, Open Source</p>
+        <p>
+          SpellGate is open-source under the GPLv3 license. It contains zero ads, zero tracking scripts, and zero subscription fees.
+          You are free to compile the source code yourself.
+        </p>
+      </LegalModal>
     </div>
   );
 };

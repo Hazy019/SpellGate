@@ -41,6 +41,45 @@ function StatCard({ icon, color, label, value, sub }) {
   );
 }
 
+/* ─────────────────────────────────────────────────────
+   SPELLGATE LOGO COMPONENT
+   Unified retro arcade/gateway branding.
+───────────────────────────────────────────────────── */
+function SpellGateLogo({ size = 24, withHex = true }) {
+  return (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      viewBox="0 0 48 48" 
+      width={size} 
+      height={size} 
+      fill="none"
+    >
+      {withHex && (
+        <path 
+          d="M 24 3 L 43 14 L 43 34 L 24 45 L 5 34 L 5 14 Z" 
+          stroke="var(--neon)" 
+          strokeWidth="2.5" 
+          strokeLinejoin="round" 
+          fill="var(--input-bg)" 
+        />
+      )}
+      
+      {/* Lintel (Top Bar) */}
+      <path d="M 13 16 L 35 16 L 35 19 L 34 19 L 34 18 L 14 18 L 14 19 L 13 19 Z" fill="var(--neon)" />
+      {/* Left Pillar */}
+      <rect x="16" y="18" width="3" height="15" fill="var(--neon)" />
+      <rect x="14" y="33" width="7" height="2" fill="var(--neon)" />
+      {/* Right Pillar */}
+      <rect x="29" y="18" width="3" height="15" fill="var(--neon)" />
+      <rect x="27" y="33" width="7" height="2" fill="var(--neon)" />
+      {/* Hanging Sign */}
+      <rect x="20" y="19" width="8" height="9" fill="var(--surface)" stroke="var(--neon)" strokeWidth="1.5" rx="1" />
+      {/* Inner Key/Core */}
+      <rect x="23" y="22" width="2" height="4" fill="var(--crimson)" rx="0.5" />
+    </svg>
+  );
+}
+
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -243,7 +282,7 @@ export default function Dashboard() {
   const isDeviceOnline = lastHeartbeat && (new Date() - lastHeartbeat) < 180000;
 
   return (
-    <div className="min-h-screen bg-ink text-text-primary font-sans flex flex-col md:flex-row relative overflow-hidden">
+    <div className="h-screen bg-ink text-text-primary font-sans flex flex-col md:flex-row relative overflow-hidden">
       
       {/* Visual Rhyming: Subtle dot-matrix background grid */}
       <div 
@@ -254,9 +293,7 @@ export default function Dashboard() {
       {/* Mobile Topbar */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 glass-hi border-b border-white/5 z-30 relative">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 logo-hex bg-neon flex items-center justify-center">
-            <Laptop className="w-3.5 h-3.5 text-ink" />
-          </div>
+          <SpellGateLogo size={28} />
           <span className="font-display text-sm font-bold tracking-widest uppercase text-brand">SpellGate</span>
         </div>
         <div className="flex items-center gap-2">
@@ -283,9 +320,7 @@ export default function Dashboard() {
       `}>
         <div className="p-6 border-b border-white/5 flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 logo-hex bg-neon flex items-center justify-center">
-              <Laptop className="w-4 h-4 text-ink" />
-            </div>
+            <SpellGateLogo size={32} />
             <h2 className="text-lg font-bold tracking-widest font-display text-brand">
               SPELLGATE
             </h2>
