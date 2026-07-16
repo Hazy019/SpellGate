@@ -774,7 +774,25 @@ const App = () => {
             </div>
           </div>
           <div style={{ borderTop: `1px solid ${brd}`, paddingTop: '1.25rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
-            <p style={{ fontSize: '0.6875rem', color: dim, margin: 0 }}>© {new Date().getFullYear()} SpellGate Security System. Open source GPLv3.</p>
+            <p style={{ fontSize: '0.6875rem', color: dim, margin: 0 }}>
+              © {new Date().getFullYear()} SpellGate Security System. Open source GPLv3. Developed by{' '}
+              <a 
+                href="https://github.com/Hazy019" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                style={{ 
+                  color: neon, 
+                  textDecoration: 'none', 
+                  borderBottom: `1px dashed ${neon}44`,
+                  transition: 'color 0.2s, border-color 0.2s',
+                  fontWeight: 600
+                }}
+                onMouseEnter={e => { e.target.style.color = '#fff'; e.target.style.borderColor = '#fff'; }}
+                onMouseLeave={e => { e.target.style.color = neon; e.target.style.borderColor = `${neon}44`; }}
+              >
+                Kyrell Santillan
+              </a>.
+            </p>
             <p style={{ fontSize: '0.6875rem', color: dim, margin: 0 }}>Engineered for Grade 4 education</p>
           </div>
         </div>

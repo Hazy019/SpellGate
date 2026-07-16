@@ -3,4 +3,4 @@ Allow: /
 Disallow: /dashboard
 Disallow: /login
 
-Sitemap: https://spellgate.web.app/sitemap.xml
+Sitemap: https://spellgate-eb1e8.web.app/sitemap.xml

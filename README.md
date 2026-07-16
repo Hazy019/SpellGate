@@ -158,3 +158,13 @@ The built `SpellGate.exe` will be located inside the `dist/` directory.
 
 *   **Typography**: *Press Start 2P* for retro-arcade gaming aesthetic, paired with *Outfit* for modern sleek dashboard design.
 *   **Color Palette**: Sleek neon cyberpunk, featuring `#4ADE80` (Arcade Green) and `#9333EA` (Cyber Purple).
+
+---
+
+## 👨‍💻 Development & Author Credits
+
+SpellGate is designed, engineered, and maintained by **[Kyrell Santillan (Hazy019)](https://github.com/Hazy019)**.
+*   **GitHub**: [@Hazy019](https://github.com/Hazy019)
+*   **Email**: [kyrell0602@gmail.com](mailto:kyrell0602@gmail.com)
+*   **Role**: Lead Architect & Developer
+
