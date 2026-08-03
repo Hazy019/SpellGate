@@ -1,62 +1,118 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Syne:wght@700;800;900&display=swap');
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────
-   DESIGN TOKENS
+   DESIGN TOKENS (v2 SPELLGATE ART DIRECTION)
 ───────────────────────────────────────────────────── */
 :root {
   --font-display: 'Syne', sans-serif;
-  --font-body:    'Space Grotesk', sans-serif;
+  --font-body:    'Plus Jakarta Sans', sans-serif;
   --font-mono:    'JetBrains Mono', monospace;
-  --ink:          #08090d;
-  --surface:      #0d0f17;
-  --panel:        #131623;
-  --border:       rgba(255,255,255,0.07);
-  --border-hi:    rgba(255,255,255,0.14);
-  --neon:         #00e5ff;
-  --neon-glow:    rgba(0,229,255,0.18);
+
+  /* Palette: Void Black, Emerald Arcade Green, Cyber Violet, Slate Glass */
+  --void-black:        #070A10;
+  --arcade-green:      #4ADE80;
+  --arcade-green-glow: rgba(74, 222, 128, 0.35);
+  --cyber-violet:      #9333EA;
+  --cyber-violet-glow: rgba(147, 51, 234, 0.35);
+  --slate-glass:       #0F172A;
+  --slate-glass-border: rgba(255, 255, 255, 0.08);
+
+  --ink:          #070A10;
+  --surface:      #0B0F19;
+  --panel:        #0F172A;
+  --border:       rgba(255,255,255,0.08);
+  --border-hi:    rgba(74, 222, 128, 0.3);
+  --neon:         #4ADE80;
+  --neon-glow:    rgba(74, 222, 128, 0.25);
   --amber:        #ffc857;
   --amber-glow:   rgba(255,200,87,0.15);
   --crimson:      #ff3864;
-  --mint:         #3dffa0;
-  --text-primary: #eef0f7;
-  --text-muted:   #949abf;
-  --text-dim:     #636a87;
+  --mint:         #4ADE80;
+  --violet:       #9333EA;
+  --text-primary: #ffffff;
+  --text-muted:   rgba(255, 255, 255, 0.85);
+  --text-dim:     rgba(255, 255, 255, 0.65);
   --input-bg:     rgba(255,255,255,0.04);
-  --glass-bg:     rgba(19, 22, 35, 0.75);
-  --glass-hi-bg:  rgba(19, 22, 35, 0.90);
+  --glass-bg:     rgba(15, 23, 42, 0.75);
+  --glass-hi-bg:  rgba(15, 23, 42, 0.90);
   --radius-sm:  10px;
   --radius:     16px;
   --radius-lg:  20px;
   --radius-xl:  28px;
   --transition: 220ms cubic-bezier(0.4,0,0.2,1);
   --transition-spring: 400ms cubic-bezier(0.34,1.56,0.64,1);
-  --btn-bg:       var(--neon);
-  --btn-text:     #08090d;
-  --btn-shadow:   0 8px 32px rgba(0,229,255,0.4), 0 0 64px rgba(0,229,255,0.12);
+  --btn-bg:       var(--arcade-green);
+  --btn-text:     #070A10;
+  --btn-shadow:   0 8px 32px rgba(74, 222, 128, 0.4), 0 0 64px rgba(74, 222, 128, 0.15);
 }
 
-.light {
-  --ink:          #f4f6fa;
-  --surface:      #ffffff;
-  --panel:        #f8fafc;
-  --border:       rgba(0,0,0,0.1);
-  --border-hi:    rgba(0,0,0,0.2);
-  --neon:         #00a8cc;
-  --neon-glow:    rgba(0,168,204,0.18);
-  --amber:        #e59f00;
-  --amber-glow:   rgba(229,159,0,0.15);
-  --crimson:      #e52b50;
-  --mint:         #23b56a;
-  --text-primary: #0f172a;
-  --text-muted:   #475569;
-  --text-dim:     #64748b;
-  --input-bg:     rgba(0,0,0,0.03);
-  --glass-bg:     rgba(255, 255, 255, 0.85);
-  --glass-hi-bg:  rgba(255, 255, 255, 0.95);
-  --btn-bg:       #005c73; /* Rich dark cyan for high contrast with white text */
-  --btn-text:     #ffffff;
-  --btn-shadow:   0 8px 24px rgba(0,92,115,0.25);
+/* ─────────────────────────────────────────────────────
+   DAYLIGHT PROTOCOL — LIGHT MODE TOKEN SYSTEM
+   Semantic tokens. Never literal white for text/icons.
+───────────────────────────────────────────────────── */
+:root[data-theme="light"],
+html.light {
+  /* Canvas — warm paper, not pure white */
+  --surface-base:       #F7F5F0;
+  --surface-card:       #FFFFFF;
+  --surface-card-alt:   #EFEDE6;
+  --surface-inverse:    #0A0A0F;  /* hero + terminal stay obsidian */
+
+  /* Ink — one color, four opacity steps, never ad-hoc gray */
+  --ink:                #10131A;
+  --text-primary:       color-mix(in srgb, #10131A 100%, transparent);
+  --text-secondary:     color-mix(in srgb, #10131A 72%, transparent);
+  --text-tertiary:      color-mix(in srgb, #10131A 45%, transparent);
+  --text-disabled:      color-mix(in srgb, #10131A 24%, transparent);
+
+  /* Accents — same brand hues, darkened for light-bg contrast */
+  --accent-lime:        #4E9E1F;
+  --accent-lime-bg:     #E9F9D8;
+  --accent-purple:      #6B3FD6;
+  --accent-purple-bg:   #EFE7FC;
+
+  /* Icon fills — explicit, never inherit white from dark default */
+  --icon-fill:          #10131A;
+  --icon-fill-onaccent: #FFFFFF;
+
+  /* Borders */
+  --border-hairline:    color-mix(in srgb, #10131A 12%, transparent);
+  --border-dotted:      color-mix(in srgb, #10131A 30%, transparent);
+
+  /* Elevation */
+  --shadow-sm:  0 1px 2px rgba(16,19,26,.06);
+  --shadow-md:  0 6px 16px rgba(16,19,26,.08);
+  --shadow-lg:  0 20px 40px rgba(16,19,26,.12);
+
+  /* Override base dark-mode tokens for downstream components */
+  --surface:          #F7F5F0;
+  --panel:            #FFFFFF;
+  --border:           rgba(16,19,26,0.12);
+  --border-hi:        rgba(16,19,26,0.25);
+  --neon:             #4E9E1F;
+  --neon-glow:        rgba(78,158,31,0.18);
+  --amber:            #b45309;
+  --amber-glow:       rgba(180,83,9,0.15);
+  --crimson:          #dc2626;
+  --mint:             #4E9E1F;
+  --violet:           #6B3FD6;
+  --arcade-green:     #4E9E1F;
+  --arcade-green-glow:rgba(78,158,31,0.25);
+  --cyber-violet:     #6B3FD6;
+  --cyber-violet-glow:rgba(107,63,214,0.25);
+  --slate-glass:      #FFFFFF;
+  --slate-glass-border:rgba(16,19,26,0.10);
+  --input-bg:         rgba(16,19,26,0.04);
+  --glass-bg:         rgba(255,255,255,0.90);
+  --glass-hi-bg:      rgba(255,255,255,0.97);
+  --btn-bg:           #4E9E1F;
+  --btn-text:         #FFFFFF;
+  --btn-shadow:       0 8px 24px rgba(78,158,31,0.25);
+
+  /* Remap text tokens used by existing component classes */
+  --text-muted:       color-mix(in srgb, #10131A 72%, transparent);
+  --text-dim:         color-mix(in srgb, #10131A 45%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -459,6 +515,143 @@ input:-webkit-autofill:focus {
   box-shadow: 0 16px 48px -8px rgba(0,0,0,0.4);
 }
 
+/* ─────────────────────────────────────────────────────
+   HUD RETICLE CORNERS MOTIF (SIGNATURE V2 VISUAL RHYMING)
+───────────────────────────────────────────────────── */
+.hud-reticle-container {
+  position: relative;
+}
+.hud-reticle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+  border-color: rgba(74, 222, 128, 0.5);
+  transition: border-color 0.3s ease, transform 0.3s ease;
+  z-index: 2;
+}
+.hud-reticle-tl { top: -1px; left: -1px; border-top: 2px solid; border-left: 2px solid; border-top-left-radius: 4px; }
+.hud-reticle-tr { top: -1px; right: -1px; border-top: 2px solid; border-right: 2px solid; border-top-right-radius: 4px; }
+.hud-reticle-bl { bottom: -1px; left: -1px; border-bottom: 2px solid; border-left: 2px solid; border-bottom-left-radius: 4px; }
+.hud-reticle-br { bottom: -1px; right: -1px; border-bottom: 2px solid; border-right: 2px solid; border-bottom-right-radius: 4px; }
+
+.hud-reticle-container:hover .hud-reticle {
+  border-color: rgba(74, 222, 128, 0.95);
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+}
+
+/* GRADIENT BORDER STROKES */
+.border-gradient-cyber {
+  position: relative;
+  background: linear-gradient(#0F172A, #0F172A) padding-box,
+              linear-gradient(135deg, rgba(74, 222, 128, 0.35), rgba(147, 51, 234, 0.35)) border-box;
+  border: 1px solid transparent;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.border-gradient-cyber:hover {
+  background: linear-gradient(#0F172A, #0F172A) padding-box,
+              linear-gradient(135deg, rgba(74, 222, 128, 0.7), rgba(147, 51, 234, 0.7)) border-box;
+  box-shadow: 0 8px 32px -8px rgba(74, 222, 128, 0.2);
+}
+
+/* 3D FLOATING KEYCAPS SYSTEM */
+.keycap-3d, .keycap-glass-3d {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-weight: 800;
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-top-color: rgba(255, 255, 255, 0.5);
+  border-bottom-color: rgba(0, 0, 0, 0.7);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  box-shadow: 
+    0 12px 28px -4px rgba(0, 0, 0, 0.8),
+    0 0 18px rgba(74, 222, 128, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.6);
+  user-select: none;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.keycap-glass-3d-floating {
+  animation: keycap-bob 4.2s ease-in-out infinite;
+}
+
+@keyframes keycap-bob {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(3deg); }
+}
+
+@keyframes laser-pulse {
+  0%, 100% { opacity: 0.75; filter: drop-shadow(0 0 6px rgba(74, 222, 128, 0.4)); }
+  50% { opacity: 1.0; filter: drop-shadow(0 0 16px rgba(147, 51, 234, 0.7)); }
+}
+
+.laser-pulse-active {
+  animation: laser-pulse 3.8s ease-in-out infinite;
+}
+
+.keycap-3d:hover, .keycap-glass-3d:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 
+    0 16px 32px -4px rgba(0, 0, 0, 0.9),
+    0 0 20px rgba(74, 222, 128, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* CTA GLOW BUTTONS */
+.btn-arcade-primary {
+  background-color: var(--arcade-green);
+  color: #070A10;
+  font-family: var(--font-body);
+  font-weight: 700;
+  padding: 0.85rem 1.85rem;
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 0 20px rgba(74, 222, 128, 0.4), 0 4px 14px rgba(0, 0, 0, 0.4);
+  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  opacity: 1 !important;
+}
+.btn-arcade-primary:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 0 32px rgba(74, 222, 128, 0.65), 0 8px 24px rgba(0, 0, 0, 0.5);
+  background-color: #3b82f6;
+  color: #ffffff;
+}
+
+.btn-cyber-secondary {
+  background: rgba(147, 51, 234, 0.15);
+  color: #c084fc;
+  font-family: var(--font-body);
+  font-weight: 600;
+  padding: 0.85rem 1.85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(147, 51, 234, 0.4);
+  backdrop-filter: blur(12px);
+  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  opacity: 0.9 !important;
+}
+.btn-cyber-secondary:hover {
+  transform: translateY(-2px);
+  background: rgba(147, 51, 234, 0.3);
+  border-color: rgba(147, 51, 234, 0.8);
+  color: #ffffff;
+  box-shadow: 0 0 24px rgba(147, 51, 234, 0.4);
+}
+
+
 /* ── HERO MOCKUP SCROLL DEPTH ────────────────────────── */
 .hero-mockup {
   transition: transform 0.25s ease, box-shadow 0.3s;
@@ -470,3 +663,825 @@ input:-webkit-autofill:focus {
 /* ── STAGGER STEPS ───────────────────────────────────── */
 .stagger-6 { animation-delay: 0.48s; }
 .stagger-7 { animation-delay: 0.56s; }
+
+/* ── PART B: LITERAL SG-CARD MOTIF (RETICLES + GRADIENT-BORDER) ────────── */
+.sg-card {
+  position: relative;
+  background: #0F172A; /* Slate Glass */
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid transparent;
+  background-image:
+    linear-gradient(#0F172A, #0F172A),
+    linear-gradient(135deg, #4ADE80, #9333EA);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sg-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(74, 222, 128, 0.15);
+}
+
+/* Reticle corner brackets — top-left and bottom-right */
+.sg-card::before,
+.sg-card::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: #4ADE80;
+  border-style: solid;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.sg-card::before {
+  top: -1px;
+  left: -1px;
+  border-width: 2px 0 0 2px;
+  border-top-left-radius: 4px;
+}
+
+.sg-card::after {
+  bottom: -1px;
+  right: -1px;
+  border-width: 0 2px 2px 0;
+  border-bottom-right-radius: 4px;
+  border-color: #9333EA; /* opposite corner uses violet — reinforces two-tone brand pairing */
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DAYLIGHT PROTOCOL — COMPREHENSIVE LIGHT MODE COMPONENT STYLES
+   Token-first. No hardcoded white text. No ad-hoc gray values.
+═══════════════════════════════════════════════════════════════ */
+
+/* ── 1. BODY / ROOT ─────────────────────────────────────────── */
+html.light body,
+html[data-theme="light"] body {
+  background-color: var(--surface-base);
+  color: var(--text-primary);
+}
+
+/* Hide the void-grid lines — they're invisible on light anyway,
+   removing avoids a paint layer */
+html.light .fixed.inset-0.pointer-events-none.z-0.opacity-15,
+html[data-theme="light"] .fixed.inset-0.pointer-events-none.z-0.opacity-15 {
+  opacity: 0 !important;
+}
+
+/* ── 2. HEADER & NAV (OPTION A: TRANSPARENT OVER HERO, LIGHT WHEN SCROLLED) ── */
+
+/* Unconditional base header in light mode — default transparent when at top */
+html.light header,
+html[data-theme="light"] header {
+  transition: background-color 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
+}
+
+/* Header at top of page over dark hero section */
+html.light header.is-top,
+html[data-theme="light"] header.is-top {
+  background-color: transparent !important;
+  border-bottom-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html.light header.is-top .nav-link-item,
+html[data-theme="light"] header.is-top .nav-link-item {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+html.light header.is-top .nav-link-item:hover,
+html[data-theme="light"] header.is-top .nav-link-item:hover {
+  color: #ffffff !important;
+}
+
+html.light header.is-top .nav-logo-wordmark,
+html[data-theme="light"] header.is-top .nav-logo-wordmark {
+  color: #4ADE80 !important;
+}
+html.light header.is-top a:hover .nav-logo-wordmark,
+html[data-theme="light"] header.is-top a:hover .nav-logo-wordmark {
+  color: #ffffff !important;
+}
+
+html.light header.is-top button[aria-label="Toggle theme"],
+html[data-theme="light"] header.is-top button[aria-label="Toggle theme"] {
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+html.light header.is-top .btn-cyber-secondary,
+html[data-theme="light"] header.is-top .btn-cyber-secondary {
+  background: rgba(147, 51, 234, 0.15) !important;
+  color: #c084fc !important;
+  border-color: rgba(147, 51, 234, 0.4) !important;
+}
+
+/* Header scrolled down over paper sections */
+html.light header.is-scrolled,
+html[data-theme="light"] header.is-scrolled {
+  background-color: rgba(247, 245, 240, 0.95) !important;
+  backdrop-filter: blur(16px) !important;
+  border-bottom: 1px solid var(--border-hairline) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+html.light header.is-scrolled .nav-link-item,
+html[data-theme="light"] header.is-scrolled .nav-link-item {
+  color: var(--text-secondary) !important;
+}
+html.light header.is-scrolled .nav-link-item:hover,
+html[data-theme="light"] header.is-scrolled .nav-link-item:hover {
+  color: var(--text-primary) !important;
+}
+
+/* Wordmark in scrolled header: high contrast dark green (#4E9E1F) */
+html.light header.is-scrolled .nav-logo-wordmark,
+html[data-theme="light"] header.is-scrolled .nav-logo-wordmark {
+  color: var(--accent-lime) !important;
+}
+html.light header.is-scrolled a:hover .nav-logo-wordmark,
+html[data-theme="light"] header.is-scrolled a:hover .nav-logo-wordmark {
+  color: var(--text-primary) !important;
+}
+
+html.light header.is-scrolled button[aria-label="Toggle theme"],
+html[data-theme="light"] header.is-scrolled button[aria-label="Toggle theme"] {
+  border-color: var(--border-hairline) !important;
+  background: rgba(16, 19, 26, 0.05) !important;
+  color: var(--text-secondary) !important;
+}
+
+/* Parent Login button — scrolled light mode */
+html.light header.is-scrolled .btn-cyber-secondary,
+html[data-theme="light"] header.is-scrolled .btn-cyber-secondary {
+  background: var(--accent-purple-bg) !important;
+  color: var(--accent-purple) !important;
+  border-color: var(--accent-purple) !important;
+  opacity: 1 !important;
+}
+html.light header.is-scrolled .btn-cyber-secondary:hover,
+html[data-theme="light"] header.is-scrolled .btn-cyber-secondary:hover {
+  background: rgba(107, 63, 214, 0.18) !important;
+  box-shadow: 0 0 20px rgba(107, 63, 214, 0.25);
+  color: var(--accent-purple) !important;
+}
+
+/* ── MOBILE NAVIGATION DRAWER — ADAPTIVE SCROLL-AWARE STYLES ── */
+
+/* 1. When at top of page over dark hero (header.is-top): ALWAYS solid bright white text & green links */
+header.is-top .mobile-nav-drawer,
+html.light header.is-top .mobile-nav-drawer,
+html[data-theme="light"] header.is-top .mobile-nav-drawer {
+  background-color: rgba(7, 10, 16, 0.96) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+header.is-top .mobile-nav-drawer a,
+html.light header.is-top .mobile-nav-drawer a,
+html[data-theme="light"] header.is-top .mobile-nav-drawer a,
+header.is-top .mobile-nav-drawer .mobile-nav-link,
+html.light header.is-top .mobile-nav-drawer .mobile-nav-link,
+html[data-theme="light"] header.is-top .mobile-nav-drawer .mobile-nav-link {
+  color: #FFFFFF !important;
+  opacity: 1 !important;
+}
+
+header.is-top .mobile-nav-drawer a:hover,
+html.light header.is-top .mobile-nav-drawer a:hover,
+html[data-theme="light"] header.is-top .mobile-nav-drawer a:hover {
+  color: #4ADE80 !important;
+}
+
+header.is-top .mobile-nav-drawer .mobile-nav-theme-label,
+html.light header.is-top .mobile-nav-drawer .mobile-nav-theme-label,
+html[data-theme="light"] header.is-top .mobile-nav-drawer .mobile-nav-theme-label {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+header.is-top .mobile-nav-drawer .mobile-nav-theme-btn,
+html.light header.is-top .mobile-nav-drawer .mobile-nav-theme-btn,
+html[data-theme="light"] header.is-top .mobile-nav-drawer .mobile-nav-theme-btn {
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #FFFFFF !important;
+}
+
+header.is-top .mobile-nav-drawer .mobile-nav-portal-link,
+html.light header.is-top .mobile-nav-drawer .mobile-nav-portal-link,
+html[data-theme="light"] header.is-top .mobile-nav-drawer .mobile-nav-portal-link {
+  color: #4ADE80 !important;
+}
+
+header.is-top .mobile-nav-drawer .mobile-nav-hr,
+html.light header.is-top .mobile-nav-drawer .mobile-nav-hr,
+html[data-theme="light"] header.is-top .mobile-nav-drawer .mobile-nav-hr {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* 2. When scrolled down over light paper sections (header.is-scrolled in Light Mode): Near-black ink text */
+html.light header.is-scrolled .mobile-nav-drawer,
+html[data-theme="light"] header.is-scrolled .mobile-nav-drawer {
+  background-color: rgba(247, 245, 240, 0.98) !important;
+  border-bottom-color: var(--border-hairline) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+}
+
+html.light header.is-scrolled .mobile-nav-drawer a,
+html[data-theme="light"] header.is-scrolled .mobile-nav-drawer a,
+html.light header.is-scrolled .mobile-nav-drawer .mobile-nav-link,
+html[data-theme="light"] header.is-scrolled .mobile-nav-drawer .mobile-nav-link {
+  color: #10131A !important;
+  opacity: 1 !important;
+}
+
+html.light header.is-scrolled .mobile-nav-drawer a:hover,
+html[data-theme="light"] header.is-scrolled .mobile-nav-drawer a:hover {
+  color: var(--accent-lime) !important;
+}
+
+html.light header.is-scrolled .mobile-nav-drawer .mobile-nav-theme-label,
+html[data-theme="light"] header.is-scrolled .mobile-nav-drawer .mobile-nav-theme-label {
+  color: var(--text-secondary) !important;
+}
+
+html.light header.is-scrolled .mobile-nav-drawer .mobile-nav-theme-btn,
+html[data-theme="light"] header.is-scrolled .mobile-nav-drawer .mobile-nav-theme-btn {
+  border-color: var(--border-hairline) !important;
+  background-color: rgba(16, 19, 26, 0.05) !important;
+  color: #10131A !important;
+}
+
+html.light header.is-scrolled .mobile-nav-drawer .mobile-nav-portal-link,
+html[data-theme="light"] header.is-scrolled .mobile-nav-drawer .mobile-nav-portal-link {
+  color: var(--accent-lime) !important;
+}
+
+html.light header.is-scrolled .mobile-nav-drawer .mobile-nav-hr,
+html[data-theme="light"] header.is-scrolled .mobile-nav-drawer .mobile-nav-hr {
+  border-color: var(--border-hairline) !important;
+}
+
+/* ── 3. SECTION BACKGROUNDS ──────────────────────────────────── */
+html.light section#features,
+html[data-theme="light"] section#features {
+  background-color: var(--surface-card-alt) !important;
+}
+html.light section#how-it-works,
+html[data-theme="light"] section#how-it-works {
+  background-color: var(--surface-base) !important;
+}
+html.light section#security,
+html[data-theme="light"] section#security {
+  background-color: var(--surface-card-alt) !important;
+}
+html.light section#faq,
+html[data-theme="light"] section#faq {
+  background-color: var(--surface-base) !important;
+}
+
+/* Stat bar strip between hero and features */
+html.light section.border-y,
+html[data-theme="light"] section.border-y {
+  background-color: var(--surface-card) !important;
+  border-color: var(--border-hairline) !important;
+}
+
+/* ── 4. SG-CARD — PAPER ELEVATION SURFACE ───────────────────── */
+html.light .sg-card,
+html[data-theme="light"] .sg-card {
+  background: var(--surface-card) !important;
+  background-image:
+    linear-gradient(var(--surface-card), var(--surface-card)),
+    linear-gradient(135deg, var(--accent-lime), var(--accent-purple)) !important;
+  background-origin: border-box !important;
+  background-clip: padding-box, border-box !important;
+  box-shadow: var(--shadow-md) !important;
+  border-color: transparent !important;
+}
+html.light .sg-card:hover,
+html[data-theme="light"] .sg-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg) !important;
+}
+/* Corner brackets — full opacity on white surfaces */
+html.light .sg-card::before,
+html[data-theme="light"] .sg-card::before,
+html.light .sg-card::after,
+html[data-theme="light"] .sg-card::after {
+  opacity: 1 !important;
+}
+
+/* ── 5. TEXT HIERARCHY IN ALL NON-HERO SECTIONS ─────────────── */
+/* Headings */
+html.light section:not(#hero) h1,
+html.light section:not(#hero) h2,
+html.light section:not(#hero) h3,
+html.light footer h1,
+html.light footer h2,
+html.light footer h3,
+html.light footer h4,
+html[data-theme="light"] section:not(#hero) h1,
+html[data-theme="light"] section:not(#hero) h2,
+html[data-theme="light"] section:not(#hero) h3,
+html[data-theme="light"] footer h4 {
+  color: var(--text-primary) !important;
+}
+/* Body text — 72% ink minimum */
+html.light section:not(#hero) p,
+html.light footer p,
+html[data-theme="light"] section:not(#hero) p,
+html[data-theme="light"] footer p {
+  color: var(--text-secondary) !important;
+}
+/* All Tailwind white/opacity classes that survive into light sections */
+html.light section:not(#hero) .text-white,
+html[data-theme="light"] section:not(#hero) .text-white {
+  color: var(--text-primary) !important;
+}
+html.light section:not(#hero) [class*="text-white\/9"],
+html.light section:not(#hero) [class*="text-white\/8"],
+html[data-theme="light"] section:not(#hero) [class*="text-white\/9"],
+html[data-theme="light"] section:not(#hero) [class*="text-white\/8"] {
+  color: var(--text-secondary) !important;
+}
+html.light section:not(#hero) [class*="text-white\/7"],
+html.light section:not(#hero) [class*="text-white\/6"],
+html.light section:not(#hero) [class*="text-white\/5"],
+html[data-theme="light"] section:not(#hero) [class*="text-white\/7"],
+html[data-theme="light"] section:not(#hero) [class*="text-white\/6"],
+html[data-theme="light"] section:not(#hero) [class*="text-white\/5"] {
+  color: var(--text-tertiary) !important;
+}
+
+/* ── 6. STAT BAR (the most broken element — fix explicitly) ─── */
+/* Stat numbers use text-arcade-green which remaps via token ✓ */
+/* Stat labels use text-white/70 — needs override */
+html.light section.border-y .sg-card span[class*="text-white"],
+html[data-theme="light"] section.border-y .sg-card span[class*="text-white"] {
+  color: var(--text-tertiary) !important;
+}
+/* Stat number values use font-display text-arcade-green — keep green,
+   but ensure the mapped --arcade-green (#4E9E1F) is dark enough on white */
+html.light section.border-y .sg-card .font-display,
+html[data-theme="light"] section.border-y .sg-card .font-display {
+  color: var(--accent-lime) !important;
+}
+
+/* ── 7. FEATURE CARD ICONS & BADGE PILLS ────────────────────── */
+/* Icon container: lime bg + lime border */
+html.light section#features .bg-arcade-green\/15,
+html.light section#how-it-works .bg-arcade-green\/15,
+html[data-theme="light"] section#features .bg-arcade-green\/15,
+html[data-theme="light"] section#how-it-works .bg-arcade-green\/15 {
+  background-color: var(--accent-lime-bg) !important;
+  border-color: var(--accent-lime) !important;
+}
+/* Icon glyph — use icon-fill so it reads on light bg */
+html.light section#features .text-arcade-green,
+html[data-theme="light"] section#features .text-arcade-green {
+  color: var(--accent-lime) !important;
+}
+/* Badge pills at bottom of feature cards */
+html.light section#features span.bg-arcade-green\/15,
+html[data-theme="light"] section#features span.bg-arcade-green\/15 {
+  background-color: var(--accent-lime-bg) !important;
+  border-color: rgba(78,158,31,0.40) !important;
+  color: var(--accent-lime) !important;
+}
+/* Eyebrow labels (// Core Capabilities etc.) */
+html.light section:not(#hero) span.text-arcade-green,
+html[data-theme="light"] section:not(#hero) span.text-arcade-green {
+  color: var(--accent-lime) !important;
+}
+html.light section:not(#hero) span.text-purple-400,
+html[data-theme="light"] section:not(#hero) span.text-purple-400 {
+  color: var(--accent-purple) !important;
+}
+
+/* ── 8. ONBOARDING STEP KEYCAP BADGES ───────────────────────── */
+/* 3D keycap step badges (01/02/03/04) keep dark fill — they're
+   physical keycap metaphors, exempt from light swap */
+html.light .keycap-glass-3d,
+html[data-theme="light"] .keycap-glass-3d {
+  /* retain original dark styling for step badges */
+  color: #ffffff;
+}
+/* Laser conduit line — swap to a muted dark track in light */
+html.light section#how-it-works .bg-white\/10,
+html[data-theme="light"] section#how-it-works .bg-white\/10 {
+  background-color: var(--border-hairline) !important;
+}
+
+/* ── 9. SECURITY SECTION ─────────────────────────────────────── */
+/* Checkmark icon containers — lime verified circles */
+html.light section#security .bg-arcade-green\/15,
+html[data-theme="light"] section#security .bg-arcade-green\/15 {
+  background-color: var(--accent-lime-bg) !important;
+  border-color: var(--accent-lime) !important;
+}
+html.light section#security .text-arcade-green,
+html[data-theme="light"] section#security .text-arcade-green {
+  color: var(--accent-lime) !important;
+}
+/* Security body text — 72% ink */
+html.light section#security h2,
+html.light section#security h3,
+html[data-theme="light"] section#security h2,
+html[data-theme="light"] section#security h3 {
+  color: var(--text-primary) !important;
+}
+html.light section#security p,
+html[data-theme="light"] section#security p {
+  color: var(--text-secondary) !important;
+}
+html.light section#security .text-white\/70,
+html[data-theme="light"] section#security .text-white\/70 {
+  color: var(--text-tertiary) !important;
+}
+
+/* ── 9a. DAEMON LOG TERMINAL — LOCAL DARK INVERSION ─────────── */
+/* The terminal panel is a "screen sitting on paper" — stays obsidian
+   in light mode. This is the tangible↔digital bridge (Section 6). */
+html.light .terminal-panel,
+html[data-theme="light"] .terminal-panel {
+  background: var(--surface-inverse) !important;
+  background-image:
+    linear-gradient(var(--surface-inverse), var(--surface-inverse)),
+    linear-gradient(135deg, rgba(74,222,128,0.35), rgba(147,51,234,0.35)) !important;
+  background-origin: border-box !important;
+  background-clip: padding-box, border-box !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+/* Terminal header text — keep light so it reads on obsidian */
+html.light .terminal-panel span,
+html.light .terminal-panel div,
+html[data-theme="light"] .terminal-panel span,
+html[data-theme="light"] .terminal-panel div {
+  /* allow lime green log lines to show naturally */
+}
+html.light .terminal-panel .text-white\/70,
+html[data-theme="light"] .terminal-panel .text-white\/70 {
+  color: rgba(255,255,255,0.70) !important;
+}
+html.light .terminal-panel .border-white\/10,
+html[data-theme="light"] .terminal-panel .border-white\/10 {
+  border-color: rgba(255,255,255,0.10) !important;
+}
+/* Reticle corners on terminal panel — green/violet work on obsidian */
+html.light .terminal-panel.sg-card::before,
+html[data-theme="light"] .terminal-panel.sg-card::before,
+html.light .terminal-panel.sg-card::after,
+html[data-theme="light"] .terminal-panel.sg-card::after {
+  opacity: 0.8 !important;
+}
+
+/* ── 10. FAQ ACCORDION ───────────────────────────────────────── */
+/* Question text */
+html.light section#faq span.font-display,
+html[data-theme="light"] section#faq span.font-display {
+  color: var(--text-primary) !important;
+}
+/* Chevron */
+html.light section#faq .text-arcade-green,
+html[data-theme="light"] section#faq .text-arcade-green {
+  color: var(--accent-lime) !important;
+}
+/* Accordion answer text */
+html.light section#faq .text-white\/90,
+html[data-theme="light"] section#faq .text-white\/90 {
+  color: var(--text-secondary) !important;
+}
+/* Accordion divider line */
+html.light section#faq .border-white\/10,
+html[data-theme="light"] section#faq .border-white\/10 {
+  border-color: var(--border-hairline) !important;
+}
+/* Active/expanded card — accent purple border glow */
+html.light section#faq .sg-card:has(> .overflow-hidden),
+html[data-theme="light"] section#faq .sg-card:has(> .overflow-hidden) {
+  box-shadow: 0 0 0 1px var(--accent-purple), var(--shadow-md) !important;
+}
+
+/* ── 11. FOOTER ──────────────────────────────────────────────── */
+html.light footer,
+html[data-theme="light"] footer {
+  background-color: var(--surface-card-alt) !important;
+  border-top: 1px solid var(--border-hairline) !important;
+}
+html.light footer h4,
+html[data-theme="light"] footer h4 {
+  color: var(--text-tertiary) !important;
+}
+html.light footer a,
+html.light footer button,
+html[data-theme="light"] footer a,
+html[data-theme="light"] footer button {
+  color: var(--text-secondary) !important;
+}
+html.light footer a:hover,
+html.light footer button:hover,
+html[data-theme="light"] footer a:hover,
+html[data-theme="light"] footer button:hover {
+  color: var(--accent-lime) !important;
+}
+html.light footer .text-arcade-green,
+html[data-theme="light"] footer .text-arcade-green {
+  color: var(--accent-lime) !important;
+}
+html.light footer .text-white\/70,
+html.light footer .text-white\/65,
+html[data-theme="light"] footer .text-white\/70,
+html[data-theme="light"] footer .text-white\/65 {
+  color: var(--text-tertiary) !important;
+}
+html.light footer .border-white\/10,
+html[data-theme="light"] footer .border-white\/10 {
+  border-color: var(--border-hairline) !important;
+}
+/* Footer status badge */
+html.light footer .bg-arcade-green\/10,
+html[data-theme="light"] footer .bg-arcade-green\/10 {
+  background-color: var(--accent-lime-bg) !important;
+  border-color: rgba(78,158,31,0.35) !important;
+}
+html.light footer .border-arcade-green\/30,
+html[data-theme="light"] footer .border-arcade-green\/30 {
+  border-color: rgba(78,158,31,0.35) !important;
+}
+
+/* ── 12. HERO SECTION — STAYS DARK IN BOTH MODES ────────────── */
+/* Hero is the scroll-stopper — never inverts. */
+html.light #hero,
+html[data-theme="light"] #hero {
+  background-color: #070A10 !important;
+  color: #ffffff !important;
+}
+/* Ensure hero text remains white on its dark canvas */
+html.light #hero h1,
+html.light #hero p,
+html.light #hero .text-white\/90,
+html.light #hero .text-white\/70,
+html[data-theme="light"] #hero h1,
+html[data-theme="light"] #hero p,
+html[data-theme="light"] #hero .text-white\/90,
+html[data-theme="light"] #hero .text-white\/70 {
+  color: inherit !important;
+}
+/* Add drop shadow beneath hero device graphic in light mode
+   so the dark panel visibly lifts off the paper canvas */
+html.light #hero img,
+html[data-theme="light"] #hero img {
+  filter: drop-shadow(0 24px 60px rgba(74,222,128,0.25))
+          drop-shadow(0 32px 80px rgba(0,0,0,0.45)) !important;
+}
+/* Keycaps in hero — keep dark-fill + white text (physical keycap metaphor, exempt) */
+html.light .keycap-3d,
+html[data-theme="light"] .keycap-3d {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(15,23,42,0.85) 100%) !important;
+}
+
+/* ── 13. BORDER OVERRIDES FOR INTERIOR DIVIDERS ─────────────── */
+html.light section:not(#hero) .border-white\/10,
+html[data-theme="light"] section:not(#hero) .border-white\/10 {
+  border-color: var(--border-hairline) !important;
+}
+
+/* ── 14. LEGAL MODAL IN LIGHT MODE ──────────────────────────── */
+html.light .bg-slate-glass,
+html[data-theme="light"] .bg-slate-glass {
+  background-color: var(--surface-card) !important;
+}
+html.light .bg-slate-glass h3,
+html[data-theme="light"] .bg-slate-glass h3 {
+  color: var(--text-primary) !important;
+}
+html.light .bg-slate-glass p,
+html.light .bg-slate-glass li,
+html[data-theme="light"] .bg-slate-glass p,
+html[data-theme="light"] .bg-slate-glass li {
+  color: var(--text-secondary) !important;
+}
+
+/* ── 15. LOGIN PAGE LIGHT MODE STYLING ──────────────────────────── */
+html.light .login-page-root,
+html[data-theme="light"] .login-page-root {
+  background-color: var(--surface-base) !important;
+  color: var(--text-primary) !important;
+}
+
+html.light .login-left-pane,
+html[data-theme="light"] .login-left-pane {
+  background-color: var(--surface-card-alt) !important;
+  border-right-color: var(--border-hairline) !important;
+}
+
+html.light .login-left-pane h2,
+html.light .login-left-pane h4,
+html[data-theme="light"] .login-left-pane h2,
+html[data-theme="light"] .login-left-pane h4 {
+  color: var(--text-primary) !important;
+}
+
+html.light .login-left-pane p,
+html[data-theme="light"] .login-left-pane p {
+  color: var(--text-secondary) !important;
+}
+
+html.light .login-left-pane .bg-white\/5,
+html[data-theme="light"] .login-left-pane .bg-white\/5 {
+  background-color: var(--accent-lime-bg) !important;
+  border-color: var(--accent-lime) !important;
+}
+
+html.light .login-left-pane .text-white\/40,
+html.light .login-left-pane .text-white\/60,
+html.light .login-left-pane .text-white\/70,
+html[data-theme="light"] .login-left-pane .text-white\/40,
+html[data-theme="light"] .login-left-pane .text-white\/60,
+html[data-theme="light"] .login-left-pane .text-white\/70 {
+  color: var(--text-tertiary) !important;
+}
+
+/* Form Card on Login Page in Light Mode */
+html.light .login-form-card,
+html[data-theme="light"] .login-form-card {
+  background: #ffffff !important;
+  border: 1px solid var(--border-hairline) !important;
+  box-shadow: var(--shadow-lg) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Tab toggle container inside form */
+html.light .login-page-root [role="tablist"],
+html[data-theme="light"] .login-page-root [role="tablist"] {
+  background: var(--surface-card-alt) !important;
+  border-color: var(--border-hairline) !important;
+}
+
+/* Tab active button in Light Mode */
+html.light .login-page-root [role="tab"][aria-selected="true"],
+html[data-theme="light"] .login-page-root [role="tab"][aria-selected="true"] {
+  background: var(--accent-lime) !important;
+  color: #ffffff !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+html.light .login-page-root [role="tab"][aria-selected="false"],
+html[data-theme="light"] .login-page-root [role="tab"][aria-selected="false"] {
+  color: var(--text-secondary) !important;
+}
+
+/* Input fields in Light Mode */
+html.light .login-page-root .input-base,
+html[data-theme="light"] .login-page-root .input-base {
+  background-color: var(--input-bg) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-hi) !important;
+}
+
+html.light .login-page-root .input-base::placeholder,
+html[data-theme="light"] .login-page-root .input-base::placeholder {
+  color: var(--text-tertiary) !important;
+}
+
+/* Input labels in Light Mode */
+html.light .login-page-root .field-group label,
+html[data-theme="light"] .login-page-root .field-group label {
+  color: var(--text-secondary) !important;
+}
+
+/* Google Sign-In button / Social button in Light Mode */
+html.light .login-page-root .btn-social,
+html[data-theme="light"] .login-page-root .btn-social {
+  background-color: var(--surface-card-alt) !important;
+  border-color: var(--border-hairline) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Footer note text in Light Mode */
+html.light .login-page-root .text-text-dim,
+html.light .login-page-root .text-text-muted,
+html[data-theme="light"] .login-page-root .text-text-dim,
+html[data-theme="light"] .login-page-root .text-text-muted {
+  color: var(--text-tertiary) !important;
+}
+
+/* ── 16. DASHBOARD LIGHT MODE SHELL, SIDEBAR & CONTROL SETTINGS ───── */
+
+/* Outermost App-Shell Background across ALL Dashboard tabs */
+html.light .dashboard-root-shell,
+html[data-theme="light"] .dashboard-root-shell,
+html.light .dashboard-root-shell main,
+html[data-theme="light"] .dashboard-root-shell main {
+  background-color: #F1F5F9 !important;
+  color: var(--text-primary) !important;
+}
+
+/* Hide dot-matrix dark overlay on dashboard in Light Mode */
+html.light .dashboard-root-shell .opacity-\[0\.03\],
+html[data-theme="light"] .dashboard-root-shell .opacity-\[0\.03\] {
+  opacity: 0 !important;
+}
+
+/* Sidebar in Light Mode — identical & consistent across ALL tabs */
+html.light .dashboard-sidebar,
+html[data-theme="light"] .dashboard-sidebar,
+html.light .dashboard-mobile-topbar,
+html[data-theme="light"] .dashboard-mobile-topbar {
+  background-color: #FFFFFF !important;
+  border-right-color: var(--border-hairline) !important;
+  box-shadow: 2px 0 16px rgba(15, 23, 42, 0.04) !important;
+}
+
+html.light .dashboard-sidebar h2,
+html.light .dashboard-sidebar h3,
+html.light .dashboard-sidebar p,
+html.light .dashboard-sidebar span,
+html[data-theme="light"] .dashboard-sidebar h2,
+html[data-theme="light"] .dashboard-sidebar h3,
+html[data-theme="light"] .dashboard-sidebar p,
+html[data-theme="light"] .dashboard-sidebar span {
+  color: var(--text-primary) !important;
+}
+
+/* Inactive nav buttons in sidebar */
+html.light .dashboard-sidebar nav button:not([class*="bg-neon"]),
+html[data-theme="light"] .dashboard-sidebar nav button:not([class*="bg-neon"]) {
+  color: var(--text-secondary) !important;
+}
+
+html.light .dashboard-sidebar nav button:hover:not([class*="bg-neon"]),
+html[data-theme="light"] .dashboard-sidebar nav button:hover:not([class*="bg-neon"]) {
+  background-color: rgba(16, 19, 26, 0.04) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Cards across all Dashboard Tabs (.glass, .glass-hi, .stat-card, etc.) */
+html.light .dashboard-root-shell .glass,
+html.light .dashboard-root-shell .glass-hi,
+html[data-theme="light"] .dashboard-root-shell .glass,
+html[data-theme="light"] .dashboard-root-shell .glass-hi {
+  background-color: #FFFFFF !important;
+  border-color: var(--border-hairline) !important;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Headings and body text inside dashboard cards */
+html.light .dashboard-root-shell h1,
+html.light .dashboard-root-shell h2,
+html.light .dashboard-root-shell h3,
+html.light .dashboard-root-shell h4,
+html[data-theme="light"] .dashboard-root-shell h1,
+html[data-theme="light"] .dashboard-root-shell h2,
+html[data-theme="light"] .dashboard-root-shell h3,
+html[data-theme="light"] .dashboard-root-shell h4 {
+  color: var(--text-primary) !important;
+}
+
+html.light .dashboard-root-shell p,
+html[data-theme="light"] .dashboard-root-shell p {
+  color: var(--text-secondary) !important;
+}
+
+html.light .dashboard-root-shell .text-text-muted,
+html.light .dashboard-root-shell .text-text-dim,
+html[data-theme="light"] .dashboard-root-shell .text-text-muted,
+html[data-theme="light"] .dashboard-root-shell .text-text-dim {
+  color: var(--text-tertiary) !important;
+}
+
+/* Control Settings inner dark bars (Active Lock Passcode, exchange rate bg) */
+html.light .dashboard-root-shell .bg-ink\/40,
+html.light .dashboard-root-shell .bg-ink\/80,
+html.light .dashboard-root-shell .bg-ink\/30,
+html.light .dashboard-root-shell .bg-panel,
+html.light .dashboard-root-shell .bg-panel\/60,
+html[data-theme="light"] .dashboard-root-shell .bg-ink\/40,
+html[data-theme="light"] .dashboard-root-shell .bg-ink\/80,
+html[data-theme="light"] .dashboard-root-shell .bg-ink\/30,
+html[data-theme="light"] .dashboard-root-shell .bg-panel,
+html[data-theme="light"] .dashboard-root-shell .bg-panel\/60 {
+  background-color: #F8FAFC !important;
+  border-color: var(--border-hairline) !important;
+}
+
+/* Range Slider track in Light Mode */
+html.light .dashboard-root-shell input[type="range"],
+html[data-theme="light"] .dashboard-root-shell input[type="range"] {
+  background: #CBD5E1 !important;
+}
+
+/* Form input fields in Dashboard Control Settings */
+html.light .dashboard-root-shell .input-base,
+html[data-theme="light"] .dashboard-root-shell .input-base {
+  background-color: #FFFFFF !important;
+  color: var(--text-primary) !important;
+  border-color: #CBD5E1 !important;
+}
+
+

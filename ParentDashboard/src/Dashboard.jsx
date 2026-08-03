@@ -4,10 +4,11 @@ import {
   Activity, Settings, User, LogOut, Clock, Award, AlertCircle,
   Save, Wifi, WifiOff, Link2, Unlock, RefreshCw, CheckCircle,
   Eye, EyeOff, Key, ShieldCheck, Laptop, Cpu, ShieldAlert, MonitorPlay,
-  Sun, Moon, Brain, Menu, X, Mail
+  Sun, Moon, Brain, Menu, X, Mail, Bell, Sparkles, Check, Trash2, Info
 } from 'lucide-react';
 import {
-  doc, onSnapshot, updateDoc, serverTimestamp, setDoc, deleteDoc
+  doc, onSnapshot, updateDoc, serverTimestamp, setDoc, deleteDoc,
+  collection, query, where
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { useAuth } from './AuthContext';
@@ -108,6 +109,188 @@ export default function Dashboard() {
   const [pairingLoading, setPairingLoading] = useState(false);
   const [pairedDeviceStatus, setPairedDeviceStatus] = useState('unpaired'); // unpaired | pairing | paired
 
+  // ── Persistent Sidebar Notifications state ────────────────────
+  const storageKey = uid ? `spellgate_notifs_${uid}` : 'spellgate_notifs_guest';
+  const [notifications, setNotifications] = useState(() => {
+    try {
+      const saved = localStorage.getItem('spellgate_notifs_guest');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [notificationsOpen, setNotificationsOpen] = useState(true);
+
+  // Load user-specific notifications when uid becomes available
+  useEffect(() => {
+    if (!uid) return;
+    try {
+      const saved = localStorage.getItem(`spellgate_notifs_${uid}`);
+      if (saved) {
+        setNotifications(JSON.parse(saved));
+      }
+    } catch (e) {}
+  }, [uid]);
+
+  // Persist notifications to localStorage whenever state changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(notifications));
+    } catch (e) {}
+  }, [notifications, storageKey]);
+
+  // ── Live listener: Pending pairing code requests ─────────────
+  useEffect(() => {
+    if (!uid) return;
+    const q = query(collection(db, 'pairing_codes'), where('parent_uid', '==', uid));
+    const unsub = onSnapshot(q, (snapshot) => {
+      snapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data();
+        const code = docSnap.id;
+        if (data && (data.device_uid || data.status === 'pending_confirmation')) {
+          const notifId = `pairing_${code}`;
+          setNotifications((prev) => {
+            if (prev.some((n) => n.id === notifId)) return prev;
+            return [
+              {
+                id: notifId,
+                type: 'pairing_request',
+                title: '🔗 Device Pairing Request',
+                message: `Device "${data.hostname || 'Child PC'}" (Win ${data.os_version || '11'}) requested connection with Code ${code}`,
+                code: code,
+                deviceUid: data.device_uid,
+                hostname: data.hostname || 'Child PC',
+                osVersion: data.os_version || '11',
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                read: false,
+                confirmed: false
+              },
+              ...prev
+            ];
+          });
+        }
+      });
+    });
+    return unsub;
+  }, [uid]);
+
+  // ── Fast Direct Listener for active pairing code ──────────────
+  useEffect(() => {
+    if (!uid || !pairingCode) return;
+    const unsub = onSnapshot(doc(db, 'pairing_codes', pairingCode), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data && (data.device_uid || data.status === 'pending_confirmation')) {
+          const notifId = `pairing_${pairingCode}`;
+          setNotifications((prev) => {
+            if (prev.some((n) => n.id === notifId)) return prev;
+            return [
+              {
+                id: notifId,
+                type: 'pairing_request',
+                title: '🔗 Device Pairing Request',
+                message: `Device "${data.hostname || 'Child PC'}" (Win ${data.os_version || '11'}) requested connection with Code ${pairingCode}`,
+                code: pairingCode,
+                deviceUid: data.device_uid,
+                hostname: data.hostname || 'Child PC',
+                osVersion: data.os_version || '11',
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                read: false,
+                confirmed: false
+              },
+              ...prev
+            ];
+          });
+        }
+      }
+    });
+    return unsub;
+  }, [uid, pairingCode]);
+
+  // ── Automatic achievement notification generator ────────────
+  useEffect(() => {
+    if (!progressData) return;
+    const mastered = progressData.mastered_words?.length ?? 0;
+    if (mastered > 0) {
+      const achId = `ach_mastered_${mastered}`;
+      setNotifications((prev) => {
+        if (prev.some((n) => n.id === achId)) return prev;
+        return [
+          {
+            id: achId,
+            type: 'achievement',
+            title: '🏆 Achievement Unlocked',
+            message: `Child mastered ${mastered} spelling words in the vault!`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            read: false
+          },
+          ...prev
+        ];
+      });
+    }
+  }, [progressData]);
+
+  // ── Handle Parent Acceptance of Pairing Request ───────────────
+  async function handleConfirmPairing(notif) {
+    if (!uid || !notif) return;
+    console.log("[Dashboard] Parent clicked Accept Confirmation for pairing code:", notif.code, "Device UID:", notif.deviceUid);
+    try {
+      // 1. Update settings with paired device UID
+      await setDoc(doc(db, 'users', uid, 'child_data', 'settings'), {
+        paired_device_uid: notif.deviceUid,
+        updated_at: serverTimestamp()
+      }, { merge: true });
+
+      // 2. Update pairing code doc status to confirmed
+      try {
+        await setDoc(doc(db, 'pairing_codes', notif.code), {
+          status: 'confirmed'
+        }, { merge: true });
+        console.log("[Dashboard] Successfully updated pairing code status to 'confirmed'");
+      } catch (e) {
+        console.error("[Dashboard] Error updating pairing code status:", e);
+      }
+
+      // 3. Update state
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notif.id ? { ...n, confirmed: true, read: true } : n))
+      );
+      setPairedDeviceStatus('paired');
+      setPairingCode('');
+
+      // 4. Add system confirmation notification
+      setNotifications((prev) => [
+        {
+          id: `confirmed_${Date.now()}`,
+          type: 'system',
+          title: '✅ Pairing Confirmed',
+          message: `Device "${notif.hostname}" is now authorized and linked!`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          read: false
+        },
+        ...prev
+      ]);
+
+      // 5. Cleanup code after 5 seconds to ensure game client reads confirmation
+      setTimeout(async () => {
+        try { await deleteDoc(doc(db, 'pairing_codes', notif.code)); } catch (e) {}
+      }, 5000);
+    } catch (e) {
+      console.error("Failed to confirm pairing:", e);
+    }
+  }
+
+  // ── Explicit Delete Notification Handler ────────────────────
+  function handleDismissNotification(id) {
+    setNotifications((prev) => {
+      const updated = prev.filter((n) => n.id !== id);
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  }
+
   // ── Live listener: child progress ──────────────────────────
   useEffect(() => {
     if (!uid) return;
@@ -198,13 +381,13 @@ export default function Dashboard() {
         parent_pin: newPin,
       });
       setPinSaveStatus('saved');
+      setTimeout(() => setPinSaveStatus('idle'), 3000);
       setNewPin('');
       setConfirmPin('');
-      setTimeout(() => setPinSaveStatus('idle'), 3000);
     } catch (e) {
       console.error(e);
       setPinSaveStatus('error');
-      setPinError('Failed to save PIN. Please try again.');
+      setPinError('Failed to save PIN.');
     }
   }
 
@@ -225,29 +408,13 @@ export default function Dashboard() {
       await setDoc(doc(db, 'pairing_codes', code), {
         parent_uid: uid,
         device_uid: '',
+        status: 'waiting',
         created_at: serverTimestamp()
       });
       
-      const unsub = onSnapshot(doc(db, 'pairing_codes', code), async (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
-          if (data.device_uid) {
-            // Child paired anonymously
-            await updateDoc(doc(db, 'users', uid, 'child_data', 'settings'), {
-              paired_device_uid: data.device_uid
-            });
-            await deleteDoc(doc(db, 'pairing_codes', code));
-            setPairedDeviceStatus('paired');
-            setPairingCode('');
-            unsub();
-          }
-        }
-      });
-      
-      // Auto-cleanup after 5 minutes
+      // Auto-cleanup after 5 minutes if unused
       setTimeout(async () => {
         try {
-          unsub();
           await deleteDoc(doc(db, 'pairing_codes', code));
           setPairingCode('');
           setPairedDeviceStatus('unpaired');
@@ -359,7 +526,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="h-screen bg-ink text-text-primary font-sans flex flex-col md:flex-row relative overflow-hidden">
+    <div className="h-screen bg-surface text-text-primary font-sans flex flex-col md:flex-row relative overflow-hidden dashboard-root-shell">
       
       {/* Visual Rhyming: Subtle dot-matrix background grid */}
       <div 
@@ -368,7 +535,7 @@ export default function Dashboard() {
       />
 
       {/* Mobile Topbar */}
-      <div className="md:hidden flex items-center justify-between px-4 py-3 glass-hi border-b border-white/5 z-30 relative">
+      <div className="md:hidden flex items-center justify-between px-4 py-3 glass-hi border-b border-white/5 z-30 relative dashboard-mobile-topbar">
         <div className="flex items-center gap-2">
           <SpellGateLogo size={28} />
           <span className="font-display text-sm font-bold tracking-widest uppercase text-brand">SpellGate</span>
@@ -385,17 +552,24 @@ export default function Dashboard() {
 
       {/* Sidebar Overlay (mobile) */}
       {sidebarOpen && (
-        <div className="md:hidden fixed inset-0 z-20 bg-black/60 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+        <div className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* ── Sidebar ── */}
       <aside className={`
-        fixed md:relative inset-y-0 left-0 z-20
-        w-64 glass-hi border-r border-white/5 flex flex-col
+        fixed md:relative inset-y-0 left-0 z-50
+        w-64 glass-hi border-r border-white/5 flex flex-col dashboard-sidebar
         transform transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
-        <div className="p-6 border-b border-white/5 flex flex-col gap-1.5">
+        <div className="p-6 border-b border-white/5 flex flex-col gap-1.5 relative">
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="md:hidden absolute top-4 right-4 p-1.5 rounded-lg bg-black/5 dark:bg-white/5 text-text-muted hover:text-text-primary cursor-pointer"
+            aria-label="Close sidebar"
+          >
+            <X className="w-4 h-4" />
+          </button>
           <div className="flex items-center gap-2">
             <SpellGateLogo size={32} />
             <h2 className="text-lg font-bold tracking-widest font-display text-brand">
@@ -416,24 +590,101 @@ export default function Dashboard() {
 
         <nav className="flex-1 p-4 space-y-1">
           {[
-            { id: 'analytics', label: 'Dashboard Activity', Icon: Activity  },
-            { id: 'settings',  label: 'Control Settings',   Icon: Settings  },
-          ].map(({ id, label, Icon }) => (
+            { id: 'analytics',     label: 'Dashboard Activity',  Icon: Activity },
+            { id: 'settings',      label: 'Control Settings',    Icon: Settings },
+            { id: 'notifications', label: 'Notifications Hub',   Icon: Bell, badge: notifications.length },
+          ].map(({ id, label, Icon, badge }) => (
             <button
               key={id}
               onClick={() => { setActiveTab(id); setSidebarOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-left font-medium text-sm ${
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 text-left font-medium text-sm cursor-pointer ${
                 activeTab === id
-                  ? 'bg-neon/10 text-neon'
+                  ? 'bg-neon/10 text-neon font-bold'
                   : 'text-text-muted hover:bg-white/5 hover:text-text-primary'
               }`}
               style={activeTab === id ? { borderLeft: '3px solid var(--neon)' } : { borderLeft: '3px solid transparent' }}
             >
-              <Icon className="w-4 h-4 flex-shrink-0" />
-              <span>{label}</span>
+              <div className="flex items-center gap-3 min-w-0">
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">{label}</span>
+              </div>
+              {badge > 0 && (
+                <span className="px-2 py-0.5 text-[0.625rem] font-bold font-mono rounded-full bg-neon/20 border border-neon/40 text-neon">
+                  {badge}
+                </span>
+              )}
             </button>
           ))}
         </nav>
+
+        {/* ── Sidebar Quick Notifications Card ── */}
+        <div className="p-4 border-t border-white/5 flex-shrink-0">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[0.6875rem] font-bold text-text-dim uppercase tracking-wider">
+              Quick Alerts
+            </span>
+            {notifications.length > 0 && (
+              <button
+                onClick={() => setNotifications([])}
+                className="text-[0.625rem] text-text-dim hover:text-red-400 font-bold transition-colors cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          {notifications.length === 0 ? (
+            <div className="bg-panel border border-white/10 rounded-2xl p-3.5 text-center flex flex-col items-center justify-center gap-1 shadow-sm">
+              <div className="w-7 h-7 rounded-full bg-mint/10 border border-mint/20 flex items-center justify-center text-mint mx-auto mb-0.5">
+                <ShieldCheck className="w-3.5 h-3.5" />
+              </div>
+              <p className="text-xs font-bold text-text-primary">All Systems Clear</p>
+              <p className="text-[0.625rem] text-text-muted">No pending pairing requests</p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
+              {notifications.map((n) => (
+                <div
+                  key={n.id}
+                  className={`p-2.5 rounded-xl border text-xs transition-all ${
+                    n.type === 'pairing_request'
+                      ? 'bg-neon/10 border-neon/30 text-neon shadow-[0_0_12px_rgba(0,229,255,0.15)]'
+                      : n.type === 'achievement'
+                      ? 'bg-amber-500/10 border-amber-500/20 text-amber-300'
+                      : 'bg-cyber-purple/10 border-cyber-purple/20 text-purple-200'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-1 mb-1">
+                    <span className="font-bold text-[0.725rem] leading-snug">{n.title}</span>
+                    <button
+                      onClick={() => handleDismissNotification(n.id)}
+                      className="text-text-dim hover:text-white p-0.5 cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <p className="text-[0.6875rem] text-text-muted leading-tight mb-2">{n.message}</p>
+
+                  {n.type === 'pairing_request' && !n.confirmed && (
+                    <button
+                      onClick={() => handleConfirmPairing(n)}
+                      className="w-full py-1.5 px-2 rounded-lg bg-gradient-to-r from-neon to-cyber-purple text-ink font-bold text-[0.6875rem] flex items-center justify-center gap-1 shadow-sm hover:opacity-90 transition-opacity cursor-pointer"
+                    >
+                      <Check className="w-3 h-3" />
+                      Accept Confirmation
+                    </button>
+                  )}
+
+                  {n.confirmed && (
+                    <span className="inline-flex items-center gap-1 text-[0.625rem] text-mint font-bold">
+                      <CheckCircle className="w-3 h-3" /> Confirmed
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="p-4 border-t border-white/5">
           <div className="flex items-center justify-between mb-4 px-2">
@@ -905,6 +1156,100 @@ export default function Dashboard() {
                       {pairingLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />}
                       Generate Pairing Code
                     </button>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* ── Notifications Hub Tab ── */}
+        {activeTab === 'notifications' && (
+          <div className="max-w-5xl space-y-6 animate-slide-up mx-auto">
+            <header className="text-center sm:text-left">
+              <h1 className="text-3xl font-bold text-text-primary tracking-tight font-display flex items-center gap-2 justify-center sm:justify-start">
+                <Bell className="w-7 h-7 text-neon" /> Notifications & Handshake Hub
+              </h1>
+              <p className="text-text-muted text-sm mt-1">Review live device pairing requests, achievements, and system status logs.</p>
+            </header>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              
+              {/* Left Column: Device Pairing Requests (2 cols) */}
+              <div className="lg:col-span-2 space-y-4">
+                <div className="glass rounded-2xl p-6 border border-white/5">
+                  <h2 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+                    <Link2 className="w-5 h-5 text-neon" />
+                    Pending Pairing Requests
+                  </h2>
+
+                  {notifications.filter(n => n.type === 'pairing_request').length === 0 ? (
+                    <div className="bg-panel/60 border border-white/5 rounded-xl p-8 text-center flex flex-col items-center justify-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-neon/10 border border-neon/20 flex items-center justify-center text-neon">
+                        <CheckCircle className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-text-primary mb-1">No Active Pairing Requests</p>
+                        <p className="text-xs text-text-muted">Generate a pairing code under Control Settings and enter it on the child's PC client.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {notifications.filter(n => n.type === 'pairing_request').map(n => (
+                        <div key={n.id} className="bg-neon/5 border border-neon/30 rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                          <div className="flex items-center gap-3 text-center sm:text-left">
+                            <div className="w-10 h-10 rounded-xl bg-neon/10 border border-neon/20 flex items-center justify-center text-neon flex-shrink-0">
+                              <Laptop className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-text-primary">{n.title}</p>
+                              <p className="text-xs text-text-muted mt-0.5">{n.message}</p>
+                              <span className="text-[0.625rem] font-mono text-neon/80 block mt-1">Code: {n.code} · Requested at {n.timestamp}</span>
+                            </div>
+                          </div>
+
+                          {!n.confirmed ? (
+                            <button
+                              onClick={() => handleConfirmPairing(n)}
+                              className="btn-primary press-effect px-5 py-2.5 text-xs font-bold bg-gradient-to-r from-neon to-cyber-purple text-ink border-none flex items-center gap-1.5 cursor-pointer flex-shrink-0"
+                            >
+                              <Check className="w-4 h-4" /> Accept Confirmation
+                            </button>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-mint/10 border border-mint/20 text-mint text-xs font-bold">
+                              <CheckCircle className="w-4 h-4" /> Confirmed
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column: Achievements & Activity Log (1 col) */}
+              <div className="space-y-4">
+                <div className="glass rounded-2xl p-6 border border-white/5">
+                  <h2 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+                    <Award className="w-5 h-5 text-amber" />
+                    Recent Achievements
+                  </h2>
+
+                  {notifications.filter(n => n.type === 'achievement').length === 0 ? (
+                    <p className="text-xs text-text-muted italic py-4 text-center">No achievements recorded yet.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {notifications.filter(n => n.type === 'achievement').map(n => (
+                        <div key={n.id} className="bg-amber/5 border border-amber/20 rounded-xl p-3.5 flex items-start gap-3">
+                          <Sparkles className="w-4 h-4 text-amber flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-bold text-text-primary">{n.title}</p>
+                            <p className="text-[0.6875rem] text-text-muted mt-0.5">{n.message}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>

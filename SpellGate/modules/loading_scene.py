@@ -327,24 +327,24 @@ class LoadingScene(QWidget):
             pass
 
     # ──────────────────────────────────────────
-    #  BOOT SEQUENCE
+    #  BOOT SEQUENCE (PHASE 1)
     # ──────────────────────────────────────────
     def _start_sequence(self):
         steps = [
             (0,    0,  "BOOTING SYSTEM",
              "<span style='color:#22d3ee'>&gt; INITIALIZING SPELLGATE SYSTEM v4.0...</span>"),
             (650,  18, "LOADING ASSETS",
-             "<span style='color:#4ade80'>&gt; LOADING WORD DATABASE............. OK</span>"),
+             "<span>&gt; LOADING WORD DATABASE............. <b style='color:#22c55e'>[OK]</b></span>"),
             (1200, 42, "LOADING ASSETS",
-             "<span style='color:#4ade80'>&gt; MOUNTING AUDIO ENGINE............. OK</span>"),
+             "<span>&gt; MOUNTING AUDIO ENGINE............. <b style='color:#22c55e'>[OK]</b></span>"),
             (1750, 60, "READING PROGRESS",
-             "<span style='color:#4ade80'>&gt; READING USER PROGRESS............. OK</span>"),
+             "<span>&gt; READING USER PROGRESS............. <b style='color:#22c55e'>[OK]</b></span>"),
             (2300, 78, "STARTING ENGINE",
-             "<span style='color:#facc15'>&gt; CALIBRATING ARCADE INTERFACE...... OK</span>"),
+             "<span>&gt; CALIBRATING ARCADE INTERFACE...... <b style='color:#22c55e'>[OK]</b></span>"),
             (2850, 92, "BUILDING SCENES",
-             "<span style='color:#4ade80'>&gt; SPAWNING CRT EFFECTS.............. OK</span>"),
+             "<span>&gt; SPAWNING CRT EFFECTS.............. <b style='color:#22c55e'>[OK]</b></span>"),
             (3350, 100,"LAUNCHING!",
-             "<span style='color:#ff00ff'>&gt; ALL SYSTEMS ONLINE — READY! 🎮</span>"),
+             "<span style='color:#ff00ff'>&gt; ALL SYSTEMS ONLINE — UNLOCK YOUR MIND! 🎮</span>"),
         ]
         for delay, pct, stage, html in steps:
             QTimer.singleShot(delay, lambda p=pct, s=stage, h=html: self._step(p, s, h))
@@ -370,7 +370,7 @@ class LoadingScene(QWidget):
                 txt = self._log.toPlainText()
                 if self._cv:
                     if not txt.endswith("█"):
-                        self._log.append("<span style='color:#22d3ee'>█</span>")
+                        self._log.append("<span style='color:#22d3ee; font-weight:bold;'>█</span>")
                 else:
                     if txt.endswith("█"):
                         c = self._log.textCursor()

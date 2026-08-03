@@ -629,13 +629,21 @@ class MemorizationScene(BaseScene):
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         hc_layout.addWidget(header)
         
-        layout.addWidget(self.header_container)
-        
-        subtitle = QLabel("INSERT COIN TO CONTINUE", self)
+        subtitle = QLabel("SPELL TO EARN TIME", self)
         subtitle.setFont(QFont(self.arcade_family, 9))
-        subtitle.setStyleSheet("color: #334155; background: transparent; letter-spacing: 3px;")
+        subtitle.setStyleSheet("color: #94a3b8; background: transparent; letter-spacing: 3px;")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(subtitle)
+
+        # 1. Instruction State Banner ("SELECT A WORD TO BEGIN", fades after first interaction)
+        self.instruction_banner = QLabel("SELECT A WORD TO BEGIN", self)
+        self.instruction_banner.setFont(QFont(self.arcade_family, 10))
+        self.instruction_banner.setStyleSheet(
+            "color: #22d3ee; background: rgba(0, 229, 255, 0.12); border: 1px solid rgba(0, 229, 255, 0.4);"
+            " padding: 6px 16px; border-radius: 20px; letter-spacing: 2px;"
+        )
+        self.instruction_banner.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.instruction_banner, alignment=Qt.AlignmentFlag.AlignCenter)
         
         self.header_glow = QGraphicsDropShadowEffect(header)
         self.header_glow.setColor(QColor("#ff00ff"))
@@ -690,21 +698,32 @@ class MemorizationScene(BaseScene):
         
         layout.addWidget(self.timer_container, alignment=Qt.AlignmentFlag.AlignCenter)
 
+        # 2. Labeled Difficulty Legend & Grid Container
         grid_widget = QWidget(self)
         grid_layout = QGridLayout(grid_widget)
+        grid_layout.setContentsMargins(10, 5, 10, 10)
+        grid_layout.setSpacing(12)
+        
+        TIER_NAMES = ["NOVICE", "APPRENTICE", "SCHOLAR", "RECALL"]
+        TIER_COLORS = ["#22c55e", "#e879f9", "#facc15", "#f97316"]
+        
+        # Render Column Difficulty Legend Chips
+        for c, (tier_name, color) in enumerate(zip(TIER_NAMES, TIER_COLORS)):
+            chip = QLabel(tier_name, grid_widget)
+            chip.setFont(QFont(self.arcade_family, 8))
+            chip.setStyleSheet(
+                f"color: {color}; background-color: rgba(0,0,0,0.6); border: 1px solid {color};"
+                " padding: 4px 8px; border-radius: 4px; letter-spacing: 2px;"
+            )
+            chip.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            grid_layout.addWidget(chip, 0, c)
         
         import math
         self.cards = []
-        row, col = 0, 0
+        row, col = 1, 0
         for i, word_data in enumerate(self.words):
             card = self.create_word_card(word_data, i)
-            # Center the row dynamically
-            if i >= len(self.words) - (len(self.words) % 4) and len(self.words) % 4 != 0:
-                offset_col = col + math.floor((4 - (len(self.words) % 4)) / 2)
-                grid_layout.addWidget(card, row, offset_col)
-            else:
-                grid_layout.addWidget(card, row, col)
-            
+            grid_layout.addWidget(card, row, col)
             self.cards.append(card)
             col += 1
             if col > 3:
@@ -713,64 +732,50 @@ class MemorizationScene(BaseScene):
         
         layout.addWidget(grid_widget)
 
-        self.ready_btn = QPushButton("RECALL MODE", self)
-        self.ready_btn.setObjectName("ActionBtn")
-        self.ready_btn.setFont(QFont(self.arcade_family, 16))
-        
-        # ActionBtn 3D DropShadow
+        # Primary Action CTA (RECALL MODE - Direct transition to Recall Phase)
+        self.ready_btn = QPushButton("RECALL MODE  ▶", self)
+        self.ready_btn.setFont(QFont(self.arcade_family, 14))
+        self.ready_btn.setStyleSheet(
+            "QPushButton { background: #facc15; color: #000000; border: 2px solid #facc15;"
+            " padding: 14px 32px; border-radius: 6px; font-weight: bold; letter-spacing: 2px; }"
+            "QPushButton:hover { background: #fde047; }"
+        )
         ab_glow = QGraphicsDropShadowEffect(self.ready_btn)
-        ab_glow.setBlurRadius(0)
+        ab_glow.setBlurRadius(16)
         ab_glow.setColor(QColor("#facc15"))
-        ab_glow.setOffset(4, 4)
+        ab_glow.setOffset(0, 0)
         self.ready_btn.setGraphicsEffect(ab_glow)
 
         self.ready_btn.clicked.connect(self.finish_memorization)
-        
-        self.press_enter_lbl = QLabel("▶▶ PRESS ENTER ◀◀", self)
-        self.press_enter_lbl.setFont(QFont(self.arcade_family, 8))
-        self.press_enter_lbl.setStyleSheet("color: #facc15; background: transparent;")
-        self.press_enter_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.press_enter_lbl.setFixedHeight(30)
-        layout.addWidget(self.press_enter_lbl, alignment=Qt.AlignmentFlag.AlignCenter)
-        
-        self._pe_visible = True
-        def blink_pe():
-            self._pe_visible = not self._pe_visible
-            opacity = "1.0" if self._pe_visible else "0.0"
-            self.press_enter_lbl.setStyleSheet(
-                f"color: #facc15; background: transparent; opacity: {opacity};"
-            )
-
-        self.press_enter_timer = QTimer(self)
-        self.press_enter_timer.timeout.connect(blink_pe)
-        self.press_enter_timer.start(500)
-
         layout.addWidget(self.ready_btn, alignment=Qt.AlignmentFlag.AlignCenter)
-
-
 
     def create_word_card(self, word_data, index):
         word = word_data["word"]
         sentence = word_data["sentence"]
+        is_recall = word_data.get("is_recall") or word_data.get("mastered") or (index % 4 == 3)
+        
+        # 4. Functional Crown Icon (ONLY on mastered/recall stage words)
+        display_label = f"👑  {word}" if is_recall else word
         
         color = NEON_COLORS[index % 4]
         default_style = (
-            f"QPushButton#WordCard {{ border: 3px solid {color};"
-            f" background-color: #000000; color: #FFFFFF; padding: 15px; border-radius: 4px; }}"
-        )
-        playing_style = (
-            f"QPushButton#WordCard {{ border: 3px solid {color};"
-            f" background-color: #1a1000; color: #facc15; padding: 15px; border-radius: 4px; }}"
+            f"QPushButton#WordCard {{ border: 2px solid {color};"
+            f" background-color: rgba(10, 10, 15, 0.9); color: #FFFFFF; padding: 12px; border-radius: 6px; }}"
+            f"QPushButton#WordCard:hover {{ background-color: rgba(255, 255, 255, 0.08); border-width: 3px; }}"
         )
 
-        btn = QPushButton(f"👾\n{word}")
+        btn = QPushButton(display_label)
         btn.setObjectName("WordCard")
-        btn.setMinimumHeight(80)
-        btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)  # Never steal focus from input fields
+        btn.setMinimumHeight(65)
+        btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         btn.setSizePolicy(QPushButton.sizePolicy(btn).horizontalPolicy().Expanding,
                           QPushButton.sizePolicy(btn).verticalPolicy().Fixed)
         btn.setStyleSheet(default_style)
-        btn.setFont(QFont(self.arcade_family, 12))
+        
+        # 5. Legible Word Text (Clean Sans-Serif font Segoe UI / Inter bold)
+        sans_font = QFont("Segoe UI", 15, QFont.Weight.Bold)
+        sans_font.setStyleHint(QFont.StyleHint.SansSerif)
+        btn.setFont(sans_font)
 
         glow = QGraphicsDropShadowEffect(btn)
         glow.setBlurRadius(15)

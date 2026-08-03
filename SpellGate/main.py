@@ -297,9 +297,12 @@ class MainWindow(QMainWindow):
         self.kiosk = KioskManager(self)
         self.kiosk.enable_kiosk_mode()
 
-        # ── Parent override shortcut ─────────────────────────
+        # ── Parent override & ESC shortcuts ───────────────────
         self.exit_shortcut = QShortcut(QKeySequence("Ctrl+Shift+P"), self)
         self.exit_shortcut.activated.connect(self.emergency_exit)
+
+        self.esc_shortcut = QShortcut(QKeySequence("Esc"), self)
+        self.esc_shortcut.activated.connect(self.handle_esc_pressed)
 
         self.showFullScreen()
         self.setContentsMargins(0, 0, 0, 0)
@@ -421,13 +424,36 @@ class MainWindow(QMainWindow):
         self.showFullScreen()
         self.show_loading_screen()
 
+    # ── ESC key & Emergency Exit logic ────────────────────────
 
-    # ── Emergency exit (parent override) ─────────────────────
+    def is_paired(self) -> bool:
+        from modules.firebase_sync import is_connected
+        return is_connected()
+
+    def handle_esc_pressed(self):
+        """
+        Handles ESC key press based on pairing status:
+        - If unpaired (e.g. LoginScene): minimizes game to taskbar so user can check web dashboard.
+        - If paired (e.g. active game): triggers emergency_exit (PIN required).
+        """
+        if isinstance(self.centralWidget(), LoginScene) or not self.is_paired():
+            print("[Main] ESC pressed while unpaired — minimizing window to taskbar.")
+            self.showMinimized()
+        else:
+            self.emergency_exit()
 
     def emergency_exit(self):
-        """Ctrl+Shift+P — asks for parent PIN, then unlocks and closes."""
-        # Determine active PIN: Firebase (live) → local cache
+        """Ctrl+Shift+P / ESC in-game — asks for parent PIN, then unlocks and closes."""
         active_pin = self._parent_pin or get_local_pin()
+
+        if not active_pin and (isinstance(self.centralWidget(), LoginScene) or not self.is_paired()):
+            print("[Main] Unpaired device emergency exit triggered — closing.")
+            self._watchdog.authorize_exit()
+            self._heartbeat_timer.stop()
+            stop_force_unlock_listener()
+            self.kiosk.disable_kiosk_mode()
+            self.close()
+            return
 
         if not active_pin:
             from PyQt6.QtWidgets import QMessageBox
@@ -453,7 +479,7 @@ class MainWindow(QMainWindow):
             self.close()
 
         elif ok:
-            # Wrong PIN — show subtle feedback (don't flash the correct PIN)
+            # Wrong PIN — show subtle feedback
             print("[Main] Incorrect PIN attempt.")
 
 

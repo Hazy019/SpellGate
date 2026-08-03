@@ -43,38 +43,75 @@ def init_firebase():
         
     return _refresh_and_init(refresh_token, parent_uid)
 
-def sign_in_anonymously():
+def get_or_create_device_id() -> str:
+    """Gets or generates a unique, persistent hardware device ID."""
+    id_file = Path("data/device_id.txt")
+    if id_file.exists():
+        try:
+            dev_id = id_file.read_text().strip()
+            if dev_id:
+                return dev_id
+        except Exception:
+            pass
+            
+    import uuid
+    dev_id = str(uuid.uuid4()).replace("-", "")[:16]
+    try:
+        id_file.parent.mkdir(parents=True, exist_ok=True)
+        id_file.write_text(dev_id)
+    except Exception:
+        pass
+    return dev_id
+
+def sign_in_device_auth():
     """
-    Signs in anonymously via Firebase Auth REST API.
+    Signs in the device via Firebase Auth REST API using a unique device credentials pair.
+    Bypasses ADMIN_ONLY_OPERATION restrictions caused by disabled Anonymous Auth.
     Returns (True, data) on success, (False, error_msg) on failure.
     """
-    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={FIREBASE_API_KEY}"
+    device_id = get_or_create_device_id()
+    email = f"device_{device_id}@spellgate.local"
+    password = f"DevicePass_{device_id}_2026!"
+    
+    url_signup = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={FIREBASE_API_KEY}"
     payload = {
+        "email": email,
+        "password": password,
         "returnSecureToken": True
     }
     
     try:
-        resp = requests.post(url, json=payload)
+        resp = requests.post(url_signup, json=payload)
         data = resp.json()
         
-        if "error" in data:
-            return False, data["error"].get("message", "Unknown error")
+        if "error" not in data:
+            return True, data
             
-        return True, data
+        err_msg = data["error"].get("message", "")
+        if err_msg == "EMAIL_EXISTS":
+            # Account exists, sign in
+            url_signin = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API_KEY}"
+            resp_in = requests.post(url_signin, json=payload)
+            data_in = resp_in.json()
+            if "error" not in data_in:
+                return True, data_in
+            return False, f"SignIn failed: {data_in['error'].get('message', 'Unknown')}"
+            
+        return False, f"SignUp failed: {err_msg}"
     except Exception as e:
         return False, str(e)
 
 def pair_device(pairing_code: str) -> tuple[bool, str | None]:
     """
     Pairs the local device with the Parent Dashboard using a 6-digit code.
-    1. signs in anonymously
+    1. signs in via device auth
     2. reads pairing code mapping to find parent_uid
-    3. updates pairing code mapping to register this device's anonymous UID
-    4. polls the parent's settings document to confirm connection.
+    3. updates pairing code mapping to register this device's UID
+    4. polls the parent's confirmation status.
     """
-    success, auth_data = sign_in_anonymously()
+    success, auth_data = sign_in_device_auth()
     if not success:
-        return False, f"Anonymous Auth failed: {auth_data}"
+        return False, f"Device Auth failed: {auth_data}"
         
     id_token = auth_data["idToken"]
     refresh_token = auth_data["refreshToken"]
@@ -93,31 +130,42 @@ def pair_device(pairing_code: str) -> tuple[bool, str | None]:
         if not parent_uid:
             return False, "Pairing code has no parent associated with it."
             
-        # Register child UID on pairing code doc
-        pairing_ref.update({"device_uid": device_uid})
+        # Register child UID and device info on pairing code doc for website confirmation
+        pairing_ref.update({
+            "device_uid": device_uid,
+            "hostname": platform.node(),
+            "os_version": platform.version(),
+            "status": "pending_confirmation"
+        })
         print(f"[Firebase] Registered device UID {device_uid} on pairing code {pairing_code}")
         
-        # Poll settings for confirmation
-        settings_ref = (
-            temp_db.collection("users")
-                   .document(parent_uid)
-                   .collection("child_data")
-                   .document("settings")
-        )
-        
+        # Poll for parent confirmation (dual-redundancy: checks pairing code status AND child_data/settings)
         paired = False
-        for _ in range(30):
+        settings_ref = temp_db.collection("users").document(parent_uid).collection("child_data").document("settings")
+        
+        for _ in range(100):
             try:
-                settings_doc = settings_ref.get()
-                if settings_doc.exists:
+                p_doc = pairing_ref.get()
+                if p_doc.exists and p_doc.to_dict().get("status") == "confirmed":
+                    print(f"[Firebase] Confirmation detected via pairing code status 'confirmed'!")
                     paired = True
                     break
             except Exception:
                 pass
-            time.sleep(1)
+                
+            try:
+                s_doc = settings_ref.get()
+                if s_doc.exists and s_doc.to_dict().get("paired_device_uid") == device_uid:
+                    print(f"[Firebase] Confirmation detected via settings paired_device_uid match!")
+                    paired = True
+                    break
+            except Exception:
+                pass
+                
+            time.sleep(0.3)
             
         if not paired:
-            return False, "Pairing timed out. Make sure you paired on the dashboard."
+            return False, "Pairing timed out. Please accept confirmation on Parent Dashboard."
             
         # Cache local credentials
         from modules.security import set_firebase_refresh_token, set_parent_uid

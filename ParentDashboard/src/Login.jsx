@@ -705,21 +705,25 @@ function LoginLayout({ children }) {
 
   return (
     <div
-      className="min-h-screen flex relative overflow-hidden"
-      style={{ background: 'var(--ink)' }}
+      className="min-h-screen flex relative overflow-hidden login-page-root"
+      style={{ background: theme === 'light' ? 'var(--surface-base)' : 'var(--ink)' }}
     >
       {/* Visual Rhyming: Dotted pattern mesh background */}
       <div 
         className="absolute inset-0 pointer-events-none opacity-[0.02] z-0" 
-        style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.7) 1px, transparent 1px)', backgroundSize: '24px 24px' }}
+        style={{ backgroundImage: theme === 'light' ? 'radial-gradient(rgba(16,19,26,0.3) 1px, transparent 1px)' : 'radial-gradient(rgba(255,255,255,0.7) 1px, transparent 1px)', backgroundSize: '24px 24px' }}
         aria-hidden="true" 
       />
 
       {/* Theme Toggle Button (Sticky Top Right) */}
       <button
         onClick={toggleTheme}
-        className="absolute top-6 right-6 w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-white/10 z-50"
-        style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)' }}
+        className="absolute top-6 right-6 w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-white/10 z-50 login-theme-toggle cursor-pointer"
+        style={{
+          background: theme === 'light' ? 'rgba(16,19,26,0.06)' : 'rgba(255,255,255,0.06)',
+          color: theme === 'light' ? 'var(--text-primary)' : 'var(--text-muted)',
+          border: theme === 'light' ? '1px solid var(--border-hairline)' : 'none'
+        }}
         aria-label="Toggle theme"
       >
         {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
@@ -727,8 +731,11 @@ function LoginLayout({ children }) {
 
       {/* Left Pane: Branding & Features (Visible only on md: and larger) */}
       <div 
-        className="hidden md:flex md:w-[42%] border-r border-white/5 flex-col justify-between p-12 relative z-10 select-none"
-        style={{ background: '#090b11' }}
+        className="hidden md:flex md:w-[42%] border-r flex-col justify-between p-12 relative z-10 select-none login-left-pane"
+        style={{
+          background: theme === 'light' ? 'var(--surface-card-alt)' : '#090b11',
+          borderColor: theme === 'light' ? 'var(--border-hairline)' : 'rgba(255,255,255,0.05)'
+        }}
       >
         <div className="absolute inset-0 bg-gradient-to-tr from-cyber-purple/5 via-transparent to-transparent pointer-events-none" />
         
@@ -777,12 +784,19 @@ function LoginLayout({ children }) {
       </div>
 
       {/* Right Pane: Sign In Form Wrapper */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 relative z-10">
+      <div 
+        className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 relative z-10 login-right-pane"
+        style={{
+          background: theme === 'light' 
+            ? 'var(--surface-base)' 
+            : 'radial-gradient(circle at 80% 20%, rgba(74, 222, 128, 0.05) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(147, 51, 234, 0.05) 0%, transparent 50%), #0D111A'
+        }}
+      >
         <div className="absolute inset-0 pointer-events-none z-0">
           <div style={{
             position: 'absolute', top: '10%', right: '10%',
             width: '40vw', height: '40vw', maxWidth: '500px',
-            background: 'radial-gradient(circle, rgba(0,229,255,0.04) 0%, transparent 65%)',
+            background: theme === 'light' ? 'radial-gradient(circle, rgba(78,158,31,0.06) 0%, transparent 65%)' : 'radial-gradient(circle, rgba(74,222,128,0.04) 0%, transparent 65%)',
             borderRadius: '50%',
           }} />
         </div>
@@ -799,8 +813,14 @@ function LoginLayout({ children }) {
 
           {/* Form Card */}
           <div
-            className="glass-hi rounded-2xl p-6 md:p-8"
-            style={{ boxShadow: '0 24px 64px -16px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05)' }}
+            className="glass-hi rounded-2xl p-6 md:p-8 login-form-card"
+            style={{
+              boxShadow: theme === 'light' 
+                ? 'var(--shadow-lg)' 
+                : '0 24px 64px -16px rgba(0,0,0,0.7), 0 0 24px rgba(74,222,128,0.08)',
+              background: theme === 'light' ? '#FFFFFF' : 'rgba(18, 24, 40, 0.92)',
+              borderColor: theme === 'light' ? 'var(--border-hairline)' : 'rgba(74, 222, 128, 0.25)'
+            }}
           >
             {children}
           </div>

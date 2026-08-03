@@ -1,326 +1,314 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence, useScroll, useTransform, useInView } from 'framer-motion';
 import {
-  Download, Rocket, Shield, Star, Zap, RefreshCw,
-  ArrowRight, Check, ChevronDown, Menu, X, Lock, Brain, Award,
-  Activity, Sun, Moon, Users, Terminal, CheckCircle2
+  Download, Shield, Star, Zap, RefreshCw, ArrowRight, ChevronDown, Menu, X, Lock, Brain,
+  Award, Activity, Sun, Moon, Users, Terminal, CheckCircle2, HelpCircle, Laptop, Smartphone,
+  Eye, Sparkles, Key, Check, Server
 } from 'lucide-react';
 import { useTheme } from './ThemeContext';
 import { useAuth } from './AuthContext';
 
 /* ─────────────────────────────────────────────────────
-   CONSTANTS
+   CONSTANTS & CONFIG
 ───────────────────────────────────────────────────── */
 const GITHUB_RELEASE_URL =
   'https://github.com/Hazy019/SpellGate/releases/latest/download/SpellGateSetup.exe';
 
 const NAV_LINKS = [
-  { href: '#features',     label: 'Features' },
+  { href: '#hero', label: 'Home' },
+  { href: '#features', label: 'Features' },
   { href: '#how-it-works', label: 'How It Works' },
-  { href: '#security',     label: 'Security' },
-  { href: '#faq',          label: 'FAQ' },
+  { href: '#security', label: 'Security' },
+  { href: '#faq', label: 'FAQ' },
 ];
 
+/* Floating 3D Keycaps spelling S-P-E-L-L */
+const KEYCAPS = [
+  { char: 'S', left: '8%', top: '28%', depth: 1.1, delay: 0.0, size: 'w-12 h-12 md:w-14 md:h-14 text-lg md:text-xl', mobile: true },
+  { char: 'P', left: '22%', top: '72%', depth: 1.3, delay: 0.4, size: 'w-14 h-14 md:w-16 md:h-16 text-xl md:text-2xl', mobile: true },
+  { char: 'E', left: '76%', top: '24%', depth: 0.9, delay: 0.8, size: 'w-11 h-11 md:w-13 md:h-13 text-base md:text-lg', mobile: false },
+  { char: 'L', left: '88%', top: '64%', depth: 1.2, delay: 1.2, size: 'w-13 h-13 md:w-15 md:h-15 text-lg md:text-xl', mobile: true },
+  { char: 'L', left: '48%', top: '88%', depth: 1.4, delay: 1.6, size: 'w-14 h-14 md:w-16 md:h-16 text-xl md:text-2xl', mobile: false },
+];
+
+/* Core Features (3 Top + 2 Bottom equal content depth) */
 const FEATURES = [
-  { icon: <Lock />,       color: '#00e5ff', bg: 'rgba(0,229,255,0.06)',   title: 'Kiosk Lock Mode',       body: 'Locks the child PC at the system level. Blocks Task Manager, Alt+Tab, and escape shortcuts. Screen opens only when spelling.' },
-  { icon: <Brain />,      color: '#ffc857', bg: 'rgba(255,200,87,0.06)',  title: 'Adaptive AI Engine',    body: 'Features multiple vocabulary tiers calibrated for Grade 4 learners. Dynamically selects words and operates fully offline.' },
-  { icon: <RefreshCw />,  color: '#3dffa0', bg: 'rgba(61,255,160,0.06)',  title: 'Active Repetition',     body: 'Spaced review algorithms automatically retest mastered words over subsequent sessions. Unfinished words return to rotation.' },
-  { icon: <Activity />,   color: '#00e5ff', bg: 'rgba(0,229,255,0.06)',   title: 'Live Portal Monitor',   body: 'Track spelling accuracy, view struggle metrics, and check remote system connectivity instantly from any web browser.' },
-  { icon: <Zap />,        color: '#ffc857', bg: 'rgba(255,200,87,0.06)',  title: 'Offline Standalone',    body: 'Bakes in a standard dictionary of grade-appropriate words. Continues running securely without requiring active internet.' },
-  { icon: <Award />,      color: '#3dffa0', bg: 'rgba(61,255,160,0.06)',  title: 'Earning Records',       body: 'Keeps detailed logs of earned PC usage time, word mastery thresholds, and daily accuracy metrics in real-time.' },
+  {
+    icon: <Brain className="text-arcade-green" size={22} />,
+    title: 'Adaptive Spelling Engine',
+    body: 'Dynamically scales vocabulary complexity across Novice, Apprentice, and Scholar difficulty tiers based on real-time accuracy.',
+    badge: '3-Tier AI Cascade'
+  },
+  {
+    icon: <Lock className="text-arcade-green" size={22} />,
+    title: 'Kiosk Lockdown Mode',
+    body: 'Secures Windows at system level. Kernel-level hooks block Task Manager, Alt+Tab, and Windows shortcut bypasses.',
+    badge: '100% Anti-Bypass'
+  },
+  {
+    icon: <Zap className="text-arcade-green" size={22} />,
+    title: 'Real-Time Force Unlock',
+    body: 'Instantly override lock states or issue custom screen-time bonuses remotely from the cloud-connected Parent Dashboard.',
+    badge: 'Instant Portal Sync'
+  },
+  {
+    icon: <RefreshCw className="text-arcade-green" size={22} />,
+    title: '100% Offline Resilient',
+    body: 'Pre-baked with 150+ Grade 4 offline word banks. Operates seamlessly without internet and syncs when back online.',
+    badge: 'Zero Internet Needed'
+  },
+  {
+    icon: <Award className="text-arcade-green" size={22} />,
+    title: 'Spaced Repetition Recall',
+    body: 'Automated Ebbinghaus retention algorithm continuously resurfaces previously missed words until total mastery is achieved.',
+    badge: 'Memory Retention'
+  },
 ];
 
+/* How It Works Steps */
 const STEPS = [
-  { num: '01', title: 'Download & Install',    body: 'Download the launcher and run the installer on your child\'s PC. Complete local setup in 2 minutes.' },
-  { num: '02', title: 'Create Portal Profile', body: 'Register your parent account. You will receive an instant verification link to protect your access.' },
-  { num: '03', title: 'Log in on the client',  body: 'Start SpellGate on the child\'s PC and authorize using your verified parent portal credentials.' },
-  { num: '04', title: 'Start Monitoring!',     body: 'SpellGate automatically runs on startup. Control multipliers and overrides directly from the dashboard.' },
+  {
+    num: '01',
+    title: 'Install Windows Client',
+    body: 'Download the launcher and run setup on your child’s PC. Startup hooks configure automatically in under 2 minutes.'
+  },
+  {
+    num: '02',
+    title: 'Generate Pair Code',
+    body: 'Launch SpellGate on the child PC to display a unique 6-digit cryptographic pairing key.'
+  },
+  {
+    num: '03',
+    title: 'Link Parent App',
+    body: 'Enter the pair code into your Parent Dashboard to establish real-time Firestore sync and remote management.'
+  },
+  {
+    num: '04',
+    title: 'Earn & Play',
+    body: 'Kids spell words to earn PC screen time. When time runs out, SpellGate locks the PC until the next challenge.'
+  },
 ];
 
+/* FAQ Accordion Items (Real Parent-Facing Content per §0) */
 const FAQ_ITEMS = [
-  { q: 'What OS does SpellGate run on?',            a: 'Windows 10 and Windows 11 are fully supported. The installer configures all startup hooks automatically.' },
-  { q: 'Can my child bypass the lock?',             a: 'SpellGate registers deep keyboard hooks to block Alt+Tab, Windows keys, and Task Manager. A parent override passcode (Ctrl+Shift+P) is available for emergencies.' },
-  { q: 'Is my child\'s data safe?',                 a: 'All logs and settings are stored in your secure Firebase Firestore instance. Only the authenticated, verified parent account can query the data.' },
-  { q: 'Does it work without internet?',            a: 'Yes. SpellGate contains a built-in offline vocabulary bank. AI-driven expansion occurs when online, but security rules and locking are fully operational offline.' },
-  { q: 'How do I control earned screen time?',      a: 'In the Parent Portal settings, you set the multiplier (e.g. 10s of playtime per word). If they spell 10 words, they get 100 seconds of unlocked access before the PC automatically locks again.' },
+  {
+    q: "Is my child's data safe?",
+    a: "Yes, absolutely. SpellGate stores all family settings and activity logs in your private Firestore database. API keys are never bundled in the executable and are fetched securely via the OS credential manager at runtime. Strict database security rules restrict access exclusively to authenticated parents with verified emails. We never sell, track, or share your data."
+  },
+  {
+    q: "What happens if the internet goes down?",
+    a: "SpellGate continues running without interruption. The Windows client comes pre-loaded with over 150 offline word banks and enforces local kiosk lock rules offline. Any screen time earned or words mastered offline are stored locally in machine-bound encrypted caches and sync automatically once reconnected."
+  },
+  {
+    q: "Can my kid bypass the lock screen?",
+    a: "No. SpellGate runs a low-level background watchdog daemon that installs system-level keyboard hooks. This actively suppresses Task Manager, Alt+Tab, Windows keys, and process termination attempts. In emergencies, parents can press Ctrl+Shift+P to enter their master override passcode."
+  },
+  {
+    q: "How do I set the exchange rate?",
+    a: "In your Parent Dashboard Portal settings, you can customize the screen-time multiplier (e.g. 15 seconds of PC time per correctly spelled word). You can also set daily maximum caps, bonus rewards for streak masteries, or adjust rates per difficulty tier."
+  },
+  {
+    q: "Does this work on Mac?",
+    a: "Currently, SpellGate is engineered exclusively for Windows 10 and Windows 11. This allows us to leverage native Windows APIs and low-level kernel hooks required to deliver an un-bypassable kiosk lock experience."
+  }
 ];
 
 /* ─────────────────────────────────────────────────────
-   HOOKS
+   HUD RETICLE BRACKETS MOTIF COMPONENT
 ───────────────────────────────────────────────────── */
-function useTilt(ref) {
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
-    const onMove = (e) => {
-      const r = el.getBoundingClientRect();
-      const x = ((e.clientX - r.left) / r.width  - 0.5) * 8;
-      const y = ((e.clientY - r.top)  / r.height - 0.5) * -6;
-      el.style.transform = `perspective(1000px) rotateX(${y}deg) rotateY(${x}deg) scale(1.01)`;
-    };
-    const onLeave = () => { el.style.transform = ''; };
-    el.addEventListener('mousemove', onMove);
-    el.addEventListener('mouseleave', onLeave);
-    return () => { el.removeEventListener('mousemove', onMove); el.removeEventListener('mouseleave', onLeave); };
-  }, [ref]);
+function HudReticles() {
+  return (
+    <>
+      <span className="hud-reticle hud-reticle-tl" />
+      <span className="hud-reticle hud-reticle-tr" />
+      <span className="hud-reticle hud-reticle-bl" />
+      <span className="hud-reticle hud-reticle-br" />
+    </>
+  );
 }
 
-/* Parallax scroll hook – returns live scrollY offset */
-function useParallax() {
-  const [scrollY, setScrollY] = useState(0);
-  useEffect(() => {
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
-    let raf;
-    const onScroll = () => {
-      raf = requestAnimationFrame(() => setScrollY(window.scrollY));
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => { window.removeEventListener('scroll', onScroll); cancelAnimationFrame(raf); };
-  }, []);
-  return scrollY;
-}
+/* ─────────────────────────────────────────────────────
+   ANIMATED COUNT-UP NUMBER HELPER
+───────────────────────────────────────────────────── */
+function CountUpNumber({ value }) {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: '-40px' });
+  const [displayVal, setDisplayVal] = useState('0');
 
-function useFadeIn() {
   useEffect(() => {
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const els = document.querySelectorAll('.reveal');
-    if (prefersReduced) {
-      els.forEach(el => el.classList.add('revealed'));
+    if (!isInView) return;
+
+    // Check if value contains numbers
+    const match = value.match(/(\d+)/);
+    if (!match) {
+      setDisplayVal(value);
       return;
     }
-    const obs = new IntersectionObserver(
-      (entries) => entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('revealed'); obs.unobserve(e.target); } }),
-      { threshold: 0.05, rootMargin: '0px 0px -20px 0px' }
-    );
-    els.forEach(el => obs.observe(el));
-    return () => obs.disconnect();
-  }, []);
+
+    const num = parseInt(match[1], 10);
+    const prefix = value.substring(0, value.indexOf(match[1]));
+    const suffix = value.substring(value.indexOf(match[1]) + match[1].length);
+
+    let startTimestamp = null;
+    const duration = 900;
+
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      const current = Math.floor(easeOut * num);
+
+      setDisplayVal(`${prefix}${current}${suffix}`);
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        setDisplayVal(value);
+      }
+    };
+
+    requestAnimationFrame(step);
+  }, [isInView, value]);
+
+  return <span ref={ref}>{displayVal}</span>;
 }
 
 /* ─────────────────────────────────────────────────────
-   SUB-COMPONENTS
+   SPELLGATE BRAND LOGO COMPONENT
 ───────────────────────────────────────────────────── */
-function FeatureCard({ icon, color, bg, title, body, delay = 0 }) {
+function SpellGateLogo({ size = 28 }) {
   return (
-    <div 
-      className="reveal glass hover-neon rounded-[20px] p-6 group cursor-default"
-      style={{ 
-        animationDelay: `${delay}ms`, 
-        borderColor: color + '22',
-        transition: 'border-color 0.3s, box-shadow 0.3s, transform 0.4s cubic-bezier(0.34,1.56,0.64,1)',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%'
-      }}
-    >
-      <div 
-        className="w-10 h-10 rounded-xl flex items-center justify-center mb-5"
-        style={{ 
-          background: bg, color,
-          transition: 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s'
-        }}
-        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.18) rotate(-4deg)'; e.currentTarget.style.boxShadow = `0 0 20px ${color}44`; }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1) rotate(0deg)'; e.currentTarget.style.boxShadow = 'none'; }}
-      >
-        {React.cloneElement(icon, { size: 20 })}
-      </div>
-      <h3 className="text-sm font-bold mb-2 tracking-tight" style={{ color: 'var(--text-primary)' }}>{title}</h3>
-      <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)', flexGrow: 1 }}>{body}</p>
-    </div>
-  );
-}
-
-function FaqItem({ q, a }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="glass rounded-[12px] overflow-hidden border border-white/5" style={{ transition: 'box-shadow 0.2s' }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-6 py-4.5 text-left gap-4 cursor-pointer"
-        style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)' }}
-        aria-expanded={open}
-      >
-        <span className="text-sm font-semibold">{q}</span>
-        <ChevronDown
-          size={16}
-          style={{
-            color: 'var(--text-muted)',
-            flexShrink: 0,
-            transform: open ? 'rotate(180deg)' : 'none',
-            transition: 'transform 0.3s ease'
-          }}
-        />
-      </button>
-      <div style={{
-        maxHeight: open ? '300px' : '0',
-        opacity: open ? 1 : 0,
-        overflow: 'hidden',
-        transition: 'max-height 0.38s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease',
-        paddingLeft: '1.5rem', paddingRight: '1.5rem',
-        paddingBottom: open ? '1.25rem' : '0',
-      }}>
-        <p className="text-xs leading-relaxed text-text-muted">{a}</p>
-      </div>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────
-   SPELLGATE LOGO COMPONENT
-   Unified retro arcade/gateway branding.
-───────────────────────────────────────────────────── */
-function SpellGateLogo({ size = 24, withHex = true }) {
-  return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      viewBox="0 0 48 48" 
-      width={size} 
-      height={size} 
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 48 48"
+      width={size}
+      height={size}
       fill="none"
     >
-      {withHex && (
-        <path 
-          d="M 24 3 L 43 14 L 43 34 L 24 45 L 5 34 L 5 14 Z" 
-          stroke="var(--neon)" 
-          strokeWidth="2.5" 
-          strokeLinejoin="round" 
-          fill="var(--input-bg)" 
-        />
-      )}
-      
-      {/* Lintel (Top Bar) */}
-      <path d="M 13 16 L 35 16 L 35 19 L 34 19 L 34 18 L 14 18 L 14 19 L 13 19 Z" fill="var(--neon)" />
-      {/* Left Pillar */}
-      <rect x="16" y="18" width="3" height="15" fill="var(--neon)" />
-      <rect x="14" y="33" width="7" height="2" fill="var(--neon)" />
-      {/* Right Pillar */}
-      <rect x="29" y="18" width="3" height="15" fill="var(--neon)" />
-      <rect x="27" y="33" width="7" height="2" fill="var(--neon)" />
-      {/* Hanging Sign */}
-      <rect x="20" y="19" width="8" height="9" fill="var(--surface)" stroke="var(--neon)" strokeWidth="1.5" rx="1" />
-      {/* Inner Key/Core */}
-      <rect x="23" y="22" width="2" height="4" fill="var(--crimson)" rx="0.5" />
+      <path
+        d="M 24 3 L 43 14 L 43 34 L 24 45 L 5 34 L 5 14 Z"
+        stroke="var(--arcade-green)"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+        fill="rgba(74, 222, 128, 0.06)"
+      />
+      <path d="M 13 16 L 35 16 L 35 19 L 34 19 L 34 18 L 14 18 L 14 19 L 13 19 Z" fill="var(--arcade-green)" />
+      <rect x="16" y="18" width="3" height="15" fill="var(--arcade-green)" />
+      <rect x="14" y="33" width="7" height="2" fill="var(--arcade-green)" />
+      <rect x="29" y="18" width="3" height="15" fill="var(--arcade-green)" />
+      <rect x="27" y="33" width="7" height="2" fill="var(--arcade-green)" />
+      <rect x="20" y="19" width="8" height="9" fill="#070A10" stroke="var(--arcade-green)" strokeWidth="1.5" rx="1" />
+      <rect x="23" y="22" width="2" height="4" fill="var(--cyber-violet)" rx="0.5" />
     </svg>
   );
 }
 
 /* ─────────────────────────────────────────────────────
    LEGAL MODAL COMPONENT
-   Written to be warm, clear, and human-centered.
 ───────────────────────────────────────────────────── */
 function LegalModal({ isOpen, onClose, title, children }) {
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
   if (!isOpen) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
-      <div
-        className="relative w-full max-w-lg bg-cyber-dark border border-white/10 rounded-2xl shadow-2xl p-6 md:p-8 flex flex-col max-h-[85vh] animate-slide-up"
-        style={{
-          background: 'var(--surface)',
-          borderColor: 'var(--border-hi)',
-          color: 'var(--text-primary)'
-        }}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="relative w-full max-w-xl bg-slate-glass border border-white/10 rounded-2xl shadow-2xl p-6 md:p-8 flex flex-col max-h-[85vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/5 pb-4">
-          <h3 className="text-lg font-bold tracking-tight font-display text-brand">
-            {title}
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-text-muted hover:text-text-primary transition-colors cursor-pointer p-1"
-            aria-label="Close dialog"
-            style={{ background: 'none', border: 'none', color: 'var(--text-muted)' }}
-          >
-            <X size={18} />
+        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+          <h3 className="text-lg font-bold font-display text-white">{title}</h3>
+          <button onClick={onClose} className="text-white/60 hover:text-white transition-colors cursor-pointer p-1">
+            <X size={20} />
           </button>
         </div>
-
-        {/* Scrollable Body */}
-        <div className="overflow-y-auto mt-4 pr-1 text-sm leading-relaxed text-text-muted space-y-4">
+        <div className="overflow-y-auto mt-4 pr-2 text-sm leading-relaxed text-white/85 space-y-4 font-body">
           {children}
         </div>
-
-        {/* Footer */}
-        <div className="border-t border-white/5 pt-4 mt-6 flex justify-end">
-          <button onClick={onClose} className="btn-primary" style={{ padding: '0.45rem 1.25rem', fontSize: '0.8125rem' }}>
-            Got it, thanks
-          </button>
+        <div className="border-t border-white/10 pt-4 mt-6 flex justify-end">
+          <button onClick={onClose} className="btn-arcade-primary text-xs px-4 py-2">Close</button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
 
 /* ─────────────────────────────────────────────────────
-   MAIN APP
+   MAIN LANDING PAGE APPLICATION (v2 MASTER DESIGN & MOTION)
 ───────────────────────────────────────────────────── */
-const App = () => {
+export default function App() {
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [downloading, setDownloading]       = useState(false);
+
+  const [downloading, setDownloading] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [scrolled, setScrolled]             = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
-  const [terminalLogs, setTerminalLogs]     = useState([
-    '[INIT] System monitor listening on child PC...',
-    '[INFO] Host name detected: CHILD-PC',
-    '[OK] Connection status: LIVE_SYNC'
-  ]);
-  const heroRef = useRef(null);
-  const scrollY = useParallax();
+  const [activeFaq, setActiveFaq] = useState(null);
 
-  useTilt(heroRef);
-  useFadeIn();
+  /* Scroll Parallax Hooks */
+  const { scrollY } = useScroll();
+  const laptopParallax = useTransform(scrollY, [0, 800], [0, -70]);
+  const phoneParallax = useTransform(scrollY, [0, 800], [0, -110]);
+  const keycapsParallax = useTransform(scrollY, [0, 800], [0, -90]);
+
+  /* Scroll-triggered Laser Conduit line progress for How It Works */
+  const howItWorksRef = useRef(null);
+  const { scrollYProgress: conduitProgress } = useScroll({
+    target: howItWorksRef,
+    offset: ["start 70%", "end 50%"]
+  });
+  const conduitWidth = useTransform(conduitProgress, [0, 1], ["0%", "100%"]);
+
+  /* Live Terminal Logs for Watchdog Showcase */
+  const [terminalLogs, setTerminalLogs] = useState([
+    '[INIT] Watchdog daemon active on host CHILD-PC',
+    '[AUTH] API keys loaded via Windows Credential Store',
+    '[HOOKS] Keyboard hooks engaged: TaskManager & Alt-Tab BLOCKED',
+    '[FIRESTORE] Rule validated: UID match for parent profile'
+  ]);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    const handleScroll = () => setScrolled(window.scrollY > 24);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Simulates real-time logs in the "Star of the Show" hero terminal mockup
+  /* Typewriter continuous terminal log stream (~1 line per 800ms) */
   useEffect(() => {
     const events = [
-      'Heartbeat packet received from CHILD-PC',
-      'Child started spelling session [Level: Intermediate]',
-      'Spelled correct: "OPINION" [+10s playtime]',
-      'Spelled correct: "SCRAMBLE" [+10s playtime]',
-      'Heartbeat ping check: [Latency: 48ms]',
-      'Time allowance exhausted: PC Locked successfully',
-      'Spelled correct: "GLOBE" [+10s playtime]'
+      '[WATCHDOG] Alt-Tab shortcut attempt intercepted and suppressed',
+      '[SPELL] Word challenge: "OPINION" -> Correct (+15s earned)',
+      '[HEARTBEAT] Ping latency: 18ms -> Live Sync active',
+      '[SPELL] Word challenge: "SCRAMBLE" -> Correct (+15s earned)',
+      '[FIRESTORE] Synchronized 2 words mastered to parent portal',
+      '[WATCHDOG] Process termination attempt blocked on PID 4192',
+      '[SPELL] Word challenge: "GLOBE" -> Correct (+15s earned)'
     ];
     let i = 0;
     const interval = setInterval(() => {
       const timestamp = new Date().toLocaleTimeString();
       setTerminalLogs(prev => [
-        ...prev.slice(-4),
+        ...prev.slice(-5),
         `[${timestamp}] ${events[i % events.length]}`
       ]);
       i++;
-    }, 4500);
+    }, 1800);
     return () => clearInterval(interval);
   }, []);
 
@@ -332,528 +320,746 @@ const App = () => {
     setDownloading(true);
     const a = document.createElement('a');
     a.href = GITHUB_RELEASE_URL;
-    a.download = 'SpellGate.exe';
+    a.download = 'SpellGateSetup.exe';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     setTimeout(() => setDownloading(false), 3000);
   };
 
-  const bg    = 'var(--ink)';
-  const brd   = 'var(--border)';
-  const neon  = 'var(--neon)';
-  const txt   = 'var(--text-primary)';
-  const muted = 'var(--text-muted)';
-  const dim   = 'var(--text-dim)';
-
   return (
-    <div style={{ minHeight: '100vh', background: bg, color: txt, overflowX: 'hidden', fontFamily: 'var(--font-body)' }}>
+    <div className="relative min-h-screen bg-[#070A10] text-white overflow-x-hidden font-body selection:bg-arcade-green selection:text-[#070A10]">
 
-      {/* Visual Rhyming: Dotted pattern mesh fixed background – parallax deep layer */}
-      <div 
-        style={{ 
-          position: 'fixed', 
-          inset: 0, 
-          pointerEvents: 'none', 
-          zIndex: 0, 
-          opacity: 0.025, 
-          backgroundImage: 'radial-gradient(rgba(255,255,255,0.7) 1px, transparent 1px)', 
-          backgroundSize: '32px 32px',
-          transform: `translateY(${scrollY * 0.12}px)`,
+      {/* ── BACK LAYER: Animated Grid Background ──────────────────────── */}
+      <div
+        className="fixed inset-0 pointer-events-none z-0 opacity-15"
+        style={{
+          backgroundImage: `linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+                            linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)`,
+          backgroundSize: '48px 48px'
         }}
-        aria-hidden="true" 
+        aria-hidden="true"
       />
 
-      {/* Atmospheric accent ambient orbs – parallax mid layer */}
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }} aria-hidden="true">
-        <div style={{ 
-          position: 'absolute', top: '-15%', left: '-10%', 
-          width: '60vw', height: '60vw', maxWidth: '750px', 
-          background: 'radial-gradient(circle, rgba(0,229,255,0.06) 0%, transparent 68%)', 
-          borderRadius: '50%',
-          transform: `translateY(${scrollY * 0.18}px)`,
-          transition: 'transform 0.1s linear',
-        }} />
-        <div style={{ 
-          position: 'absolute', bottom: '10%', right: '-10%', 
-          width: '50vw', height: '50vw', maxWidth: '650px', 
-          background: 'radial-gradient(circle, rgba(139,92,246,0.04) 0%, transparent 68%)', 
-          borderRadius: '50%',
-          transform: `translateY(${scrollY * -0.08}px)`,
-          transition: 'transform 0.1s linear',
-        }} />
+      {/* Atmospheric Glowing Orbs */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">
+        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-arcade-green/10 rounded-full blur-[140px]" />
+        <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] bg-cyber-violet/10 rounded-full blur-[140px]" />
+        <div className="absolute -bottom-40 left-1/4 w-[600px] h-[600px] bg-arcade-green/5 rounded-full blur-[160px]" />
       </div>
 
-      {/* ── NAVBAR ────────────────────────────────────────── */}
-      <header style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-        background: scrolled ? (theme === 'dark' ? 'rgba(8,9,13,0.85)' : 'rgba(244,246,250,0.85)') : 'transparent',
-        borderBottom: scrolled ? `1px solid ${brd}` : '1px solid transparent',
-        backdropFilter: scrolled ? 'blur(20px)' : 'none',
-        transition: 'background 0.3s, border-color 0.3s',
-      }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyBetween: 'space-between' }}>
+      {/* ── FRONT LAYER: FLOATING 3D KEYCAPS (S-P-E-L-L) ──────────────── */}
+      <motion.div
+        style={{ y: keycapsParallax }}
+        className="absolute inset-x-0 top-0 h-[900px] pointer-events-none z-30 max-w-7xl mx-auto overflow-hidden"
+      >
+        {KEYCAPS.map((kc, idx) => (
+          <motion.div
+            key={idx}
+            initial={{ opacity: 0, scale: 0.5, y: 40 }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              y: [0, -14 * kc.depth, 0],
+              rotate: [0, 5 * (idx % 2 === 0 ? 1 : -1), 0]
+            }}
+            transition={{
+              opacity: { duration: 0.8, delay: kc.delay },
+              scale: { duration: 0.8, delay: kc.delay },
+              y: { duration: 3.5 + idx * 0.5, repeat: Infinity, ease: 'easeInOut', delay: kc.delay },
+              rotate: { duration: 4.5 + idx * 0.5, repeat: Infinity, ease: 'easeInOut', delay: kc.delay }
+            }}
+            style={{
+              position: 'absolute',
+              left: kc.left,
+              top: kc.top,
+              filter: `drop-shadow(0 12px 24px rgba(0,0,0,0.8))`
+            }}
+            className={`keycap-3d ${kc.size} ${!kc.mobile ? 'hidden md:inline-flex' : 'inline-flex'}`}
+          >
+            {kc.char}
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {/* ── NAVBAR ────────────────────────────────────────────────────── */}
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#070A10]/90 backdrop-blur-xl border-b border-white/10 py-3.5 is-scrolled' : 'bg-transparent py-5 is-top'
+        }`}>
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+
           {/* Logo */}
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', textDecoration: 'none' }} aria-label="SpellGate Home">
-            <SpellGateLogo size={34} />
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 850, letterSpacing: '0.2em', textTransform: 'uppercase', color: neon }}>SpellGate</span>
+          <Link to="/" className="flex items-center gap-3 text-white no-underline group" aria-label="SpellGate Home">
+            <SpellGateLogo size={32} />
+            <span className="font-display text-lg font-extrabold tracking-widest uppercase text-arcade-green group-hover:text-white transition-colors nav-logo-wordmark">
+              SpellGate
+            </span>
           </Link>
 
-          {/* Desktop Nav with micro-interaction underline */}
-          <nav className="hidden md:flex" style={{ gap: '2rem', alignItems: 'center', marginLeft: 'auto', marginRight: '2.5rem' }}>
-            {NAV_LINKS.map(l => (
-              <a 
-                key={l.href} href={l.href} 
-                className="nav-link-item"
-                style={{ 
-                  color: muted, fontSize: '0.8125rem', fontWeight: 600, 
-                  textDecoration: 'none', letterSpacing: '0.02em',
-                  position: 'relative', paddingBottom: '2px',
-                  transition: 'color 0.2s',
-                }}
-                onMouseEnter={e => e.currentTarget.style.color = txt}
-                onMouseLeave={e => e.currentTarget.style.color = muted}
+          {/* Desktop Navigation Links */}
+          <nav className="hidden md:flex items-center gap-8">
+            {NAV_LINKS.map(link => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-xs font-semibold text-white/80 hover:text-white transition-colors uppercase tracking-wider relative py-1 nav-link-item"
               >
-                {l.label}
-                <span style={{
-                  position: 'absolute', bottom: -2, left: 0, right: 0,
-                  height: '1.5px', background: 'var(--neon)',
-                  transform: 'scaleX(0)', transformOrigin: 'left',
-                  transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1)',
-                }}
-                  className="nav-underline"
-                />
+                {link.label}
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-arcade-green scale-x-0 origin-left transition-transform duration-200 nav-underline" />
               </a>
             ))}
           </nav>
 
-          {/* Desktop CTA */}
-          <div className="hidden md:flex" style={{ gap: '0.75rem', alignItems: 'center' }}>
-            <button onClick={toggleTheme} className="press-effect" aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-              style={{ width: 34, height: 34, borderRadius: '50%', border: `1px solid ${brd}`, background: 'transparent', color: muted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-color 0.2s, color 0.2s' }}>
-              {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+          {/* Desktop Right Action Buttons */}
+          <div className="hidden md:flex items-center gap-3">
+            <button
+              onClick={toggleTheme}
+              className="w-9 h-9 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/70 hover:text-white hover:border-arcade-green/40 transition-colors cursor-pointer"
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
             </button>
-            <Link to={user ? "/dashboard" : "/login"} className="btn-ghost" style={{ fontSize: '0.75rem', padding: '0.45rem 1rem' }}>{user ? "Dashboard" : "Parent Login"}</Link>
-            <button onClick={handleDownload} disabled={downloading} className="btn-primary press-effect" style={{ fontSize: '0.75rem', padding: '0.45rem 1rem' }}>
-              {downloading ? <><RefreshCw size={12} className="animate-spin" /> Fetching…</> : <><Download size={12} /> Get App</>}
+
+            <Link
+              to={user ? "/dashboard" : "/login"}
+              className="btn-cyber-secondary text-xs px-4 py-2"
+            >
+              {user ? "Parent Dashboard" : "Parent Login"}
+            </Link>
+
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="btn-arcade-primary text-xs px-4 py-2"
+            >
+              {downloading ? (
+                <><RefreshCw size={14} className="animate-spin" /> Downloading…</>
+              ) : (
+                <><Download size={14} /> Get App</>
+              )}
             </button>
           </div>
 
-          {/* Mobile Hamburger */}
-          <button className="md:hidden press-effect" onClick={() => setMobileMenuOpen(o => !o)} aria-label="Toggle menu"
-            style={{ background: 'transparent', border: 'none', color: muted, cursor: 'pointer', marginLeft: 'auto' }}>
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          {/* Mobile Hamburger Toggle */}
+          <button
+            onClick={() => setMobileMenuOpen(o => !o)}
+            className={`md:hidden p-2 rounded-lg cursor-pointer transition-colors ${
+              scrolled && theme === 'light'
+                ? 'text-[#10131A] hover:bg-black/5'
+                : 'text-white/90 hover:text-white hover:bg-white/10'
+            }`}
+            aria-label="Toggle Navigation Menu"
+          >
+            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
 
-        {/* Mobile Drawer */}
-        <div style={{
-          maxHeight: mobileMenuOpen ? '380px' : '0',
-          overflow: 'hidden',
-          transition: 'max-height 0.35s cubic-bezier(0.4,0,0.2,1)',
-          background: theme === 'dark' ? 'rgba(8,9,13,0.96)' : 'rgba(244,246,250,0.96)',
-          borderBottom: mobileMenuOpen ? `1px solid ${brd}` : 'none',
-          backdropFilter: 'blur(20px)',
-        }}>
-          <nav style={{ padding: '0.5rem 1.5rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {NAV_LINKS.map(l => (
-              <a key={l.href} href={l.href} onClick={() => setMobileMenuOpen(false)}
-                style={{ color: muted, fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none' }}>{l.label}</a>
-            ))}
-            <hr style={{ border: 'none', borderTop: `1px solid ${brd}` }} />
-            <button onClick={toggleTheme} style={{ background: 'none', border: 'none', color: muted, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8125rem', fontWeight: 600, textAlign: 'left', padding: 0 }}>
-              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-              {theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}
-            </button>
-            <Link to={user ? "/dashboard" : "/login"} onClick={() => setMobileMenuOpen(false)} style={{ color: muted, fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none' }}>{user ? "Dashboard" : "Parent Login"}</Link>
-            <button onClick={handleDownload} className="btn-primary w-full"><Download size={14} /> Download Launcher</button>
-          </nav>
-        </div>
-      </header>
-
-      {/* ── HERO ──────────────────────────────────────────── */}
-      <section style={{ position: 'relative', zIndex: 10, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyCenter: 'center', padding: '7.5rem 1.5rem 4.5rem', textAlign: 'center' }}>
-        <div style={{ maxWidth: '960px', margin: '0 auto', width: '100%' }}>
-          
-          <div className="reveal badge badge-neon animate-slide-up" style={{ marginBottom: '1.75rem', display: 'inline-flex' }}>
-            <Star size={11} className="text-neon" /> Interactive Spelling & Control Platform
-          </div>
-
-          {/* Scroll-triggered hero headline with stagger */}
-          <h1 
-            className="reveal animate-slide-up stagger-1 font-display" 
-            style={{ 
-              fontSize: 'clamp(2.25rem, 7.5vw, 4.5rem)', fontWeight: 900, 
-              lineHeight: 1.08, letterSpacing: '-0.025em', 
-              margin: '0 0 1.25rem', color: txt,
-              transform: `translateY(${scrollY * -0.04}px)`,
-            }}
-          >
-            Exchange screen time for
-            <br />
-            <span className="text-shimmer">spelling mastery.</span>
-          </h1>
-
-          <p 
-            className="reveal animate-slide-up stagger-2 text-text-muted" 
-            style={{ 
-              fontSize: 'clamp(0.9375rem, 2.2vw, 1.125rem)', maxWidth: '580px', 
-              margin: '0 auto 2.5rem', lineHeight: 1.65, opacity: 0.9,
-              transform: `translateY(${scrollY * -0.025}px)`,
-            }}
-          >
-            SpellGate secures Windows under an interactive kiosk game. Children unlock access to the system by completing curriculum-aligned spelling tasks.
-          </p>
-
-          <div className="reveal animate-slide-up stagger-3" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'center' }}>
-            <button onClick={handleDownload} disabled={downloading} className="btn-primary press-effect" style={{ fontSize: '0.875rem', padding: '0.8rem 1.85rem' }}>
-              {downloading ? <><RefreshCw size={16} className="animate-spin" /> Preparing Client…</> : <><Download size={16} /> Get SpellGate Launcher</>}
-            </button>
-            <Link to={user ? "/dashboard" : "/login"} className="btn-ghost press-effect" style={{ fontSize: '0.875rem', padding: '0.8rem 1.85rem' }}>
-              {user ? "Go to Dashboard" : "Access Parent Portal"} <ArrowRight size={15} />
-            </Link>
-          </div>
-          <p className="reveal animate-slide-up stagger-4 text-text-dim" style={{ fontSize: '0.6875rem', marginTop: '1rem', letterSpacing: '0.02em', fontWeight: 500 }}>Windows 10 / 11 · Zero Configuration Needed · 100% Free</p>
-
-          {/* Star of the Show / Mock Browser Mockup (Scroll Stopping & Depth) */}
-          <div ref={heroRef} className="reveal animate-slide-up stagger-5" style={{ marginTop: '4.5rem', transition: 'transform 0.25s ease' }}>
-            <div style={{ 
-              maxWidth: '820px', 
-              margin: '0 auto', 
-              borderRadius: 16, 
-              overflow: 'hidden', 
-              background: 'rgba(13,15,23,0.75)', 
-              border: '1px solid rgba(255,255,255,0.06)', 
-              boxShadow: '0 32px 80px -16px rgba(0,229,255,0.08), inset 0 1px 0 rgba(255,255,255,0.05)',
-              position: 'relative'
-            }}>
-              
-              {/* Depth: Floating Live Sync status badge overlapping screen */}
-              <div 
-                className="absolute top-18 right-6 z-20 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[0.6875rem] font-bold tracking-wider uppercase bg-mint/15 text-mint border border-mint/20 animate-pulse"
-                style={{ boxShadow: '0 4px 16px rgba(61,255,160,0.15)' }}
-              >
-                <CheckCircle2 size={12} /> Live Link Active
-              </div>
-
-              {/* Browser window topbar */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '12px 18px', borderBottom: `1px solid ${brd}`, background: 'rgba(255,255,255,0.01)' }}>
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(255,95,87,0.5)', display: 'inline-block' }} />
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(254,188,46,0.5)', display: 'inline-block' }} />
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(40,200,64,0.5)', display: 'inline-block' }} />
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.625rem', color: 'rgba(255,255,255,0.4)', flex: 1, textAlign: 'center', letterSpacing: '0.04em' }}>spellgate-console · parent-portal-sync</span>
-                <Lock size={11} style={{ color: '#3dffa0' }} />
-              </div>
-
-              {/* Grid Content inside Mock Window */}
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 p-5" style={{ minHeight: '260px' }}>
-                
-                {/* Simulated Stats Left Column (3/5 width) */}
-                <div className="md:col-span-3 flex flex-col gap-4">
-                  {/* Glass Stats group */}
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { label: 'Sync Status', val: 'ONLINE', clr: '#00e5ff', bg: 'rgba(0,229,255,0.05)' },
-                      { label: 'Words Mastery', val: '142', clr: '#ffc857', bg: 'rgba(255,200,87,0.05)' },
-                      { label: 'Time Bank', val: '12m 40s', clr: '#3dffa0', bg: 'rgba(61,255,160,0.05)' }
-                    ].map(card => (
-                      <div key={card.label} className="rounded-lg p-3 text-left border border-white/5" style={{ background: card.bg, borderColor: card.clr + '15' }}>
-                        <span style={{ fontSize: '0.625rem', fontWeight: 600, color: 'rgba(255,255,255,0.45)', display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{card.label}</span>
-                        <span style={{ fontSize: '0.9375rem', fontWeight: 800, color: card.clr, fontFamily: 'var(--font-mono)' }}>{card.val}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Gorgeous visual SVG progress chart */}
-                  <div className="rounded-lg p-4 flex-1 border border-white/5 bg-ink/30 flex flex-col justify-between" style={{ background: 'rgba(0,0,0,0.2)' }}>
-                    <span className="text-[0.625rem] font-bold text-left uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.45)' }}>Mastery Velocity</span>
-                    <div style={{ height: '110px', width: '100%', position: 'relative', marginTop: 10 }}>
-                      <svg viewBox="0 0 100 35" width="100%" height="100%" preserveAspectRatio="none">
-                        <defs>
-                          <linearGradient id="chart-glow" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="var(--neon)" stopOpacity="0.15" />
-                            <stop offset="100%" stopColor="var(--neon)" stopOpacity="0.0" />
-                          </linearGradient>
-                        </defs>
-                        <path d="M 0 35 Q 15 25, 30 28 T 60 12 T 90 4 T 100 2 L 100 35 Z" fill="url(#chart-glow)" />
-                        <path d="M 0 35 Q 15 25, 30 28 T 60 12 T 90 4 T 100 2" fill="none" stroke="var(--neon)" strokeWidth="1.2" />
-                        <circle cx="90" cy="4" r="1.5" fill="var(--neon)" className="animate-pulse" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Simulated Live Terminal Right Column (2/5 width) */}
-                <div className="md:col-span-2 rounded-lg bg-black/60 border border-white/5 p-4 flex flex-col font-mono text-left relative">
-                  <div className="absolute top-2.5 right-3.5 flex items-center gap-1.5">
-                    <Terminal size={10} style={{ color: '#00e5ff' }} />
-                    <span className="text-[0.5625rem] font-bold tracking-wider uppercase" style={{ color: 'rgba(255,255,255,0.35)' }}>Live Output</span>
-                  </div>
-                  <h4 className="text-[0.625rem] font-bold mb-3 uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.45)' }}>Device Log Terminal</h4>
-                  <div className="flex-1 flex flex-col gap-1.5 overflow-hidden text-[0.6875rem] text-[#3dffa0]">
-                    {terminalLogs.map((log, index) => (
-                      <div key={index} className="truncate opacity-90 border-l border-neon/20 pl-2">
-                        {log}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── SOCIAL PROOF ──────────────────────────────────── */}
-      <div style={{ position: 'relative', zIndex: 10, padding: '1.5rem', borderTop: `1px solid ${brd}`, borderBottom: `1px solid ${brd}`, background: theme === 'dark' ? 'rgba(13,15,23,0.6)' : 'rgba(248,250,252,0.8)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '2.5rem' }}>
-          {[
-            ['#00e5ff', <Shield size={14} />, 'System-Level Integrity'],
-            ['#ffc857', <Zap size={14} />, 'Gemini AI Calibrated'],
-            ['#3dffa0', <Check size={14} />, 'No Subscription Model'],
-            ['#00e5ff', <RefreshCw size={14} />, '100% Offline Capable'],
-            ['#ffc857', <Users size={14} />, 'Grade 4 Curriculum Aligned']
-          ].map(([clr, icon, label]) => (
-            <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8125rem', fontWeight: 600, color: dim, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              <span style={{ color: clr }}>{icon}</span> {label}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* ── FEATURES ──────────────────────────────────────── */}
-      <section id="features" style={{ position: 'relative', zIndex: 10, padding: '6.5rem 1.5rem' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div className="reveal" style={{ textAlign: 'center', marginBottom: '4.5rem' }}>
-            <div className="badge badge-neon" style={{ marginBottom: '1rem', display: 'inline-flex' }}>System Features</div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.75rem, 4vw, 2.75rem)', fontWeight: 900, margin: '0 0 1rem', color: txt, tracking: '-0.01em' }}>
-              Built for learning. Calibrated for security.
-            </h2>
-            <p style={{ color: muted, maxWidth: '580px', margin: '0 auto', lineHeight: 1.65, fontSize: '0.875rem' }}>Every system component was engineered to incentivize vocabulary development while enforcing strict system boundaries.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {FEATURES.map((f, i) => <FeatureCard key={i} {...f} delay={i * 60} />)}
-          </div>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS ──────────────────────────────────── */}
-      <section id="how-it-works" style={{ position: 'relative', zIndex: 10, padding: '6.5rem 1.5rem', borderTop: `1px solid ${brd}`, background: theme === 'dark' ? 'rgba(13,15,23,0.6)' : 'rgba(248,250,252,0.8)' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div className="reveal" style={{ textAlign: 'center', marginBottom: '4.5rem' }}>
-            <div className="badge badge-amber" style={{ marginBottom: '1rem', display: 'inline-flex' }}>Deployment Path</div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.75rem, 4vw, 2.75rem)', fontWeight: 900, margin: '0 0 1rem', color: txt }}>Streamlined Onboarding</h2>
-            <p style={{ color: muted, lineHeight: 1.65, fontSize: '0.875rem' }}>Zero complicated commands. Set up and link the local lock app to your portal in under 5 minutes.</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
-            {STEPS.map((s, i) => (
-              <div key={i} className="reveal glass rounded-[14px] hover-amber transition-all duration-300" style={{ padding: '1.5rem', animationDelay: `${i * 80}ms` }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '2.25rem', fontWeight: 900, color: 'var(--amber)', opacity: 0.25, marginBottom: '0.75rem' }}>{s.num}</div>
-                <h3 style={{ fontWeight: 700, fontSize: '0.875rem', color: txt, marginBottom: '0.5rem' }}>{s.title}</h3>
-                <p style={{ fontSize: '0.75rem', color: muted, lineHeight: 1.55 }}>{s.body}</p>
-              </div>
-            ))}
-          </div>
-          <div style={{ textAlign: 'center', marginTop: '3.5rem' }}>
-            <button onClick={handleDownload} disabled={downloading} className="btn-primary press-effect" style={{ fontSize: '0.875rem' }}>
-              <Download size={15} /> Download Client Package
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ── SECURITY ──────────────────────────────────────── */}
-      <section id="security" style={{ position: 'relative', zIndex: 10, padding: '6.5rem 1.5rem' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '4rem', alignItems: 'center' }}>
-          <div className="reveal">
-            <div className="badge badge-mint" style={{ marginBottom: '1.25rem', display: 'inline-flex' }}>Security Metrics</div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.5rem, 3.5vw, 2.5rem)', fontWeight: 900, lineHeight: 1.15, margin: '0 0 1.5rem', color: txt }}>
-              Hardened Access Control
-            </h2>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {[
-                { icon: <Lock size={15} />, title: 'Strict Identity Controls',  body: 'Data is protected via custom Firestore rules matching only verified parent users.' },
-                { icon: <Shield size={15} />, title: 'Low-Level Keyboard Hooks', body: 'Local app monitors OS key logs to block task-switching options (Alt+Tab, Windows keys).' },
-                { icon: <Check size={15} />, title: 'Zero Third-Party Logs',     body: 'All activity logs remain strictly confidential. SpellGate uses no tracking cookies or ads.' },
-                { icon: <Zap size={15} />, title: 'Cryptographic Checksums',    body: 'Integrity is protected locally via machine-bound HMAC signatures on progress files.' },
-              ].map((p, i) => (
-                <li key={i} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                  <div style={{ width: 30, height: 30, borderRadius: 6, background: 'rgba(61,255,160,0.06)', color: '#3dffa0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>{p.icon}</div>
-                  <div>
-                    <p style={{ fontWeight: 700, fontSize: '0.875rem', color: txt, margin: '0 0 0.25rem' }}>{p.title}</p>
-                    <p style={{ fontSize: '0.75rem', color: muted, lineHeight: 1.55, margin: 0 }}>{p.body}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <p style={{ fontSize: '0.6875rem', color: dim, marginTop: '2rem' }}>
-              For legal frameworks see our{' '}
-              <button onClick={() => setShowPrivacyModal(true)} className="policy-link" style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'var(--neon)', cursor: 'pointer', borderBottom: '1px solid transparent' }}>Privacy Policy</button>{' '}and{' '}
-              <button onClick={() => setShowTermsModal(true)} className="policy-link" style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'var(--neon)', cursor: 'pointer', borderBottom: '1px solid transparent' }}>Terms of Service</button>.
-            </p>
-          </div>
-          <div className="reveal glass-hi" style={{ borderRadius: 16, padding: '1.75rem', boxShadow: '0 24px 64px -16px rgba(61,255,160,0.04)', border: '1px solid rgba(61,255,160,0.15)' }}>
-            <h3 style={{ fontWeight: 700, fontSize: '0.875rem', marginBottom: '1rem', color: '#3dffa0', display: 'flex', alignItems: 'center', gap: 6, margin: '0 0 1rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              <Shield size={14} /> Firestore Ruleset
-            </h3>
-            <pre style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', lineHeight: 1.6, color: theme === 'dark' ? '#9cb8d2' : '#334155', margin: 0, overflowX: 'auto' }}>{`match /users/{userId}/{document=**} {
-  allow read, update, delete: if
-    request.auth != null &&
-    request.auth.uid == userId &&
-    request.auth.token.email_verified == true;
-
-  allow create: if
-    request.auth != null &&
-    request.auth.uid == userId;
-}`}</pre>
-            <p style={{ fontSize: '0.6875rem', color: dim, marginTop: '1rem' }}>Rules strictly isolate settings data and enforce email validation thresholds.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* ── FAQ ───────────────────────────────────────────── */}
-      <section id="faq" style={{ position: 'relative', zIndex: 10, padding: '6.5rem 1.5rem', borderTop: `1px solid ${brd}`, background: theme === 'dark' ? 'rgba(13,15,23,0.6)' : 'rgba(248,250,252,0.8)' }}>
-        <div style={{ maxWidth: '700px', margin: '0 auto' }}>
-          <div className="reveal" style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-            <div className="badge badge-neon" style={{ marginBottom: '1rem', display: 'inline-flex' }}>Common FAQ</div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 900, color: txt, margin: 0 }}>System Queries</h2>
-          </div>
-          <div className="reveal" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {FAQ_ITEMS.map((item, i) => <FaqItem key={i} {...item} />)}
-          </div>
-        </div>
-      </section>
-
-      {/* ── FOOTER ────────────────────────────────────────── */}
-      <footer style={{ position: 'relative', zIndex: 10, borderTop: `1px solid ${brd}`, padding: '4rem 1.5rem 2rem', background: theme === 'dark' ? 'rgba(8,9,13,0.92)' : 'rgba(244,246,250,0.95)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '2.5rem', marginBottom: '3.5rem' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.75rem' }}>
-                <SpellGateLogo size={30} />
-                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 850, fontSize: '0.8125rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: neon }}>SpellGate</span>
-              </div>
-              <p style={{ fontSize: '0.75rem', color: muted, lineHeight: 1.6, margin: '0 0 1.25rem' }}>A curriculum-focused utility that turns screen access limits into constructive spelling study incentives.</p>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                {[
-                  { href: 'https://github.com/Hazy019/SpellGate', label: 'GitHub', svg: <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg> },
-                  { href: 'https://twitter.com',                   label: 'Twitter', svg: <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> },
-                ].map(s => (
-                  <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.label}
-                    style={{ width: 30, height: 30, borderRadius: 6, border: `1px solid ${brd}`, background: 'transparent', color: muted, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', transition: 'border-color 0.2s, color 0.2s' }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = neon; e.currentTarget.style.color = neon; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = brd; e.currentTarget.style.color = muted; }}>
-                    {s.svg}
+        {/* Mobile Navigation Drawer */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className={`md:hidden overflow-hidden border-b transition-colors duration-300 mobile-nav-drawer ${
+                scrolled && theme === 'light'
+                  ? 'bg-[#F7F5F0]/98 backdrop-blur-xl border-[var(--border-hairline)] shadow-lg'
+                  : 'bg-[#070A10]/95 backdrop-blur-xl border-white/10'
+              }`}
+            >
+              <nav className="flex flex-col gap-4 px-6 py-6 text-sm">
+                {NAV_LINKS.map(link => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="font-semibold text-base transition-colors mobile-nav-link"
+                  >
+                    {link.label}
                   </a>
                 ))}
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-xs font-mono font-semibold opacity-90 mobile-nav-theme-label">
+                    Theme Mode
+                  </span>
+                  <button
+                    onClick={toggleTheme}
+                    className="px-3.5 py-2 rounded-lg border flex items-center gap-2 text-xs font-bold cursor-pointer transition-colors mobile-nav-theme-btn"
+                    aria-label="Toggle theme"
+                  >
+                    {theme === 'dark' ? <><Sun size={14} className="text-amber-400" /> Light Mode</> : <><Moon size={14} className="text-arcade-green" /> Dark Mode</>}
+                  </button>
+                </div>
+                <hr className="border-white/15 my-1 mobile-nav-hr" />
+                <Link
+                  to={user ? "/dashboard" : "/login"}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="font-bold text-sm mobile-nav-portal-link"
+                >
+                  {user ? "Go to Dashboard" : "Parent Dashboard Portal"}
+                </Link>
+                <button
+                  onClick={handleDownload}
+                  className="btn-arcade-primary w-full justify-center text-xs py-3 mt-2"
+                >
+                  <Download size={14} /> Download Client Launcher
+                </button>
+              </nav>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </header>
+
+      {/* ── 5.1 HERO SECTION (BALANCED TWO-COLUMN SPLIT - MASTER PROMPT V7) ────────── */}
+      <section id="hero" className="relative z-10 min-h-screen flex items-center pt-28 pb-16 px-6 overflow-hidden">
+
+        {/* Ambient Void Background Glow Spill */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[550px] bg-gradient-to-r from-arcade-green/20 via-emerald-500/10 to-cyber-violet/25 blur-[140px] rounded-full -z-10 pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+
+          {/* ── LEFT COLUMN (~50% width / lg:col-span-6) ───────────────────── */}
+          <div className="lg:col-span-6 text-left relative z-20">
+
+            {/* Micro-Badge */}
+            <motion.div
+              initial={{ opacity: 0, y: -16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-arcade-green/10 border border-arcade-green/30 text-arcade-green text-xs font-mono font-semibold uppercase tracking-wider mb-6"
+            >
+              <Sparkles size={13} /> Grade 4 Screen-Time Management Kiosk
+            </motion.div>
+
+            {/* Staggered Line Headline */}
+            <motion.h1
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.08 }}
+              className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.08] text-white mb-6"
+            >
+              Transform Screen Time Into <br />
+              <span className="bg-gradient-to-r from-arcade-green via-emerald-300 to-purple-400 bg-clip-text text-transparent">
+                Spelling Mastery.
+              </span>
+            </motion.h1>
+
+            {/* Subheadline */}
+            <motion.p
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.18 }}
+              className="text-white/90 text-base sm:text-lg max-w-xl leading-relaxed mb-8"
+            >
+              SpellGate locks Windows PCs behind AI-driven spelling challenges. Kids spell to earn play time; parents monitor and control in real-time.
+            </motion.p>
+
+            {/* Action CTAs (Exclusion Zone Safe - Part A) */}
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.26 }}
+              className="flex flex-wrap items-center gap-4 mb-4 relative z-30"
+            >
+              <button
+                onClick={handleDownload}
+                disabled={downloading}
+                className="btn-arcade-primary text-sm px-7 py-3.5 text-black font-bold"
+              >
+                {downloading ? (
+                  <><RefreshCw size={16} className="animate-spin" /> Preparing Package…</>
+                ) : (
+                  <><Download size={16} /> Get Started Free <ArrowRight size={16} /></>
+                )}
+              </button>
+
+              <Link
+                to={user ? "/dashboard" : "/login"}
+                className="btn-cyber-secondary text-sm px-7 py-3.5"
+              >
+                <Shield size={16} /> Parent Dashboard Portal
+              </Link>
+            </motion.div>
+
+            <p className="text-white/70 text-xs font-mono mt-3">
+              Windows 10 / 11 · Zero Configuration Needed · 100% Free Open Source
+            </p>
+
+            {/* Systemic Exclusion Zone Keycaps (Frosted 3D Glass - Part A & D) */}
+            <div className="absolute -top-8 -left-8 keycap-glass-3d keycap-glass-3d-floating w-11 h-11 text-base shadow-xl hidden lg:flex pointer-events-none" style={{ animationDelay: '0s' }}>
+              S
+            </div>
+            <div className="absolute top-1/2 -left-12 keycap-glass-3d keycap-glass-3d-floating w-10 h-10 text-sm shadow-xl hidden lg:flex pointer-events-none" style={{ animationDelay: '1.2s' }}>
+              P
+            </div>
+          </div>
+
+          {/* ── RIGHT COLUMN (~50% width / lg:col-span-6) — UNCONTAINED WIDE HERO (Part A & B) ── */}
+          <div className="lg:col-span-6 relative flex items-center justify-center">
+
+            {/* Ambient Uncontained Void Glow Spill Behind Hero Graphic */}
+            <div className="absolute -inset-4 bg-gradient-to-r from-arcade-green/20 via-emerald-500/10 to-cyber-violet/25 blur-3xl rounded-full -z-10 opacity-70 pointer-events-none" />
+
+            {/* Uncontained Hero Device Scene Graphic (Proportional Anchor) */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' }}
+              style={{ y: laptopParallax }}
+              className="relative w-full max-w-lg lg:max-w-xl group overflow-visible"
+            >
+              <div className="relative w-full flex items-center justify-center">
+                <img
+                  src="/laptop.png"
+                  alt="SpellGate kiosk game on laptop connected to the parent dashboard on phone with floating SPELL keycaps"
+                  className="w-full h-auto rounded-2xl object-contain transition-transform duration-700 group-hover:scale-[1.02] filter drop-shadow-[0_24px_60px_rgba(74,222,128,0.25)]"
+                  loading="eager"
+                />
+              </div>
+            </motion.div>
+
+            {/* Systemic Exclusion Zone Keycaps (Part A & D: Frosted 3D Glass) */}
+            <div className="absolute -top-6 right-4 keycap-glass-3d keycap-glass-3d-floating w-11 h-11 text-base shadow-xl hidden lg:flex pointer-events-none" style={{ animationDelay: '0.8s' }}>
+              E
+            </div>
+            <div className="absolute top-1/3 -right-8 keycap-glass-3d keycap-glass-3d-floating w-10 h-10 text-sm shadow-xl hidden lg:flex pointer-events-none" style={{ animationDelay: '2.1s' }}>
+              L
+            </div>
+            <div className="absolute -bottom-8 right-12 keycap-glass-3d keycap-glass-3d-floating w-12 h-12 text-lg shadow-xl hidden lg:flex pointer-events-none" style={{ animationDelay: '1.5s' }}>
+              L
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── 5.2 PROOF & STATS STRIP (PART A: STATIC MARKETING CLAIMS + PART B: .SG-CARD) ── */}
+      <section className="relative z-20 py-8 px-6 border-y border-white/10 bg-[#0F172A]/90 backdrop-blur-md">
+        <div className="max-w-6xl mx-auto">
+          <div className="sg-card grid grid-cols-2 md:grid-cols-4 gap-6 text-center shadow-2xl">
+            <HudReticles />
+            
+            {[
+              { val: '150+', label: 'Offline Word Banks' },
+              { val: '3-Tier', label: 'Adaptive AI Cascade' },
+              { val: '100%', label: 'Anti-Bypass Security' },
+              { val: 'Zero-Lag', label: 'TTS Audio' }
+            ].map((stat, idx) => (
+              <div key={idx} className="flex flex-col items-center">
+                <span className="font-display text-2xl sm:text-4xl font-extrabold text-white font-mono stat-number">
+                  <CountUpNumber value={stat.val} />
+                </span>
+                <span className="text-arcade-green text-xs font-mono font-medium mt-1 uppercase tracking-wider stat-label">
+                  {stat.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 5.3 CORE FEATURES GRID (PART B: LITERAL .SG-CARD MOTIF) ──────── */}
+      <section id="features" className="relative z-10 py-24 px-6 bg-[#070A10]">
+        <div className="max-w-6xl mx-auto">
+          
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <span className="text-xs font-mono text-arcade-green uppercase tracking-widest font-semibold block mb-3">
+              // Core Capabilities
+            </span>
+            <h2 className="font-display text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+              Engineered For Learning. <br />
+              Hardened For Security.
+            </h2>
+            <p className="text-white/90 text-sm sm:text-base mt-4">
+              Every system component is calibrated to maximize spelling retention while enforcing strict system boundaries.
+            </p>
+          </div>
+
+          {/* 3 Top Row + 2 Bottom Row Layout with .sg-card Motif */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            {FEATURES.slice(0, 3).map((feat, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.1 }}
+                transition={{ duration: 0.5, delay: idx * 0.1 }}
+                whileHover={{ y: -4, scale: 1.01 }}
+                className="sg-card flex flex-col justify-between group shadow-2xl transition-all duration-300"
+              >
+                <HudReticles />
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-arcade-green/15 border border-arcade-green/40 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform text-arcade-green shadow-md">
+                    {feat.icon}
+                  </div>
+                  <h3 className="font-display text-xl font-bold text-white mb-2">{feat.title}</h3>
+                  <p className="text-white/90 text-xs sm:text-sm leading-relaxed mb-6">{feat.body}</p>
+                </div>
+                <span className="inline-flex items-center text-[10px] font-mono font-semibold uppercase tracking-wider text-arcade-green bg-arcade-green/15 border border-arcade-green/30 px-3 py-1 rounded-full w-fit">
+                  {feat.badge}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {FEATURES.slice(3, 5).map((feat, idx) => (
+              <motion.div
+                key={idx + 3}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.1 }}
+                transition={{ duration: 0.5, delay: (idx + 3) * 0.1 }}
+                whileHover={{ y: -4, scale: 1.01 }}
+                className="sg-card flex flex-col justify-between group shadow-2xl transition-all duration-300"
+              >
+                <HudReticles />
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-arcade-green/15 border border-arcade-green/40 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform text-arcade-green shadow-md">
+                    {feat.icon}
+                  </div>
+                  <h3 className="font-display text-xl font-bold text-white mb-2">{feat.title}</h3>
+                  <p className="text-white/90 text-xs sm:text-sm leading-relaxed mb-6">{feat.body}</p>
+                </div>
+                <span className="inline-flex items-center text-[10px] font-mono font-semibold uppercase tracking-wider text-arcade-green bg-arcade-green/15 border border-arcade-green/30 px-3 py-1 rounded-full w-fit">
+                  {feat.badge}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── 5.4 HOW IT WORKS (PART B: ONBOARDING STEP CARDS WITH .SG-CARD) ── */}
+      <section id="how-it-works" ref={howItWorksRef} className="relative z-10 py-24 px-6 bg-[#0B0F19]">
+        <div className="max-w-6xl mx-auto">
+          
+          <div className="text-center max-w-2xl mx-auto mb-20">
+            <span className="text-xs font-mono text-purple-400 uppercase tracking-widest font-semibold block mb-3">
+              // Deployment Path
+            </span>
+            <h2 className="font-display text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+              Streamlined Onboarding
+            </h2>
+            <p className="text-white/90 text-sm sm:text-base mt-4">
+              Set up the Windows lock app and pair your parent portal in under 5 minutes.
+            </p>
+          </div>
+
+          {/* Laser Conduit Progress Bar Container */}
+          <div className="relative">
+            
+            {/* Conduit Background Track Line */}
+            <div className="hidden md:block absolute top-12 left-0 right-0 h-[3px] bg-white/10 z-0" />
+            
+            {/* Scroll-Linked Glowing Laser Conduit Line */}
+            <motion.div 
+              style={{ width: conduitWidth }}
+              className="hidden md:block absolute top-12 left-0 h-[3px] bg-gradient-to-r from-arcade-green via-emerald-400 to-purple-500 shadow-[0_0_12px_#4ADE80] z-0"
+            />
+
+            {/* 4 Step Cards with .sg-card Motif */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 relative z-10">
+              {STEPS.map((step, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true, amount: 0.1 }}
+                  transition={{ duration: 0.5, delay: idx * 0.12 }}
+                  whileHover={{ y: -4 }}
+                  className="sg-card flex flex-col justify-between shadow-2xl transition-all duration-300"
+                >
+                  <HudReticles />
+                  <div>
+                    {/* 3D Keycap Step Badge */}
+                    <div className="keycap-glass-3d w-12 h-12 text-lg mb-6 shadow-lg">
+                      {step.num}
+                    </div>
+                    <h3 className="font-display text-lg font-bold text-white mb-2">{step.title}</h3>
+                    <p className="text-white/90 text-xs leading-relaxed">{step.body}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── 5.5 SECURITY SHOWCASE (PART B: SECURITY PANEL WITH .SG-CARD) ── */}
+      <section id="security" className="relative z-10 py-24 px-6 bg-[#070A10]">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          
+          {/* Left Column: Plain Language High-Contrast Verified Security Claims */}
+          <motion.div 
+            initial={{ opacity: 0, x: -24 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.1 }}
+            transition={{ duration: 0.6 }}
+          >
+            <span className="text-xs font-mono text-arcade-green uppercase tracking-widest font-semibold block mb-3">
+              // Anti-Bypass Architecture
+            </span>
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-8">
+              Zero-Bypass Kernel Protection
+            </h2>
+
+            <div className="space-y-6">
+              {[
+                {
+                  title: 'OS Credential Manager Key Protection',
+                  desc: 'API keys are never hardcoded or bundled. Security credentials are dynamically fetched via Windows Credential Manager at runtime.'
+                },
+                {
+                  title: 'Strict Family Isolation Rules',
+                  desc: 'Firestore security rules strictly isolate family data and enforce token authorization to prevent cross-tenant access.'
+                },
+                {
+                  title: 'Background Daemon Watchdog',
+                  desc: 'A low-level background watchdog daemon monitors OS system events to block Task Manager, Alt+Tab, and process termination attempts.'
+                }
+              ].map((claim, idx) => (
+                <div key={idx} className="flex items-start gap-4">
+                  <div className="w-8 h-8 rounded-lg bg-arcade-green/15 border border-arcade-green/40 text-arcade-green flex items-center justify-center flex-shrink-0 mt-1 shadow-md">
+                    <Check size={16} />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-base font-bold text-white mb-1">{claim.title}</h3>
+                    <p className="text-white/90 text-xs sm:text-sm leading-relaxed">{claim.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8 text-xs text-white/70 font-mono">
+              Review full security frameworks in our{' '}
+              <button onClick={() => setShowPrivacyModal(true)} className="text-arcade-green hover:underline font-bold cursor-pointer">
+                Privacy Policy
+              </button>{' '}
+              and{' '}
+              <button onClick={() => setShowTermsModal(true)} className="text-arcade-green hover:underline font-bold cursor-pointer">
+                Terms of Service
+              </button>.
+            </div>
+          </motion.div>
+
+          {/* Right Column: Live Terminal Log Texture Stream with .sg-card */}
+          <motion.div 
+            initial={{ opacity: 0, x: 24 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.1 }}
+            transition={{ duration: 0.6 }}
+            className="sg-card terminal-panel font-mono text-xs text-left shadow-2xl"
+          >
+            <HudReticles />
+
+            <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Terminal size={14} className="text-arcade-green" />
+                <span className="text-white/70 font-bold uppercase text-[10px]">Daemon Log Texture Stream</span>
+              </div>
+              <span className="flex items-center gap-1.5 text-[10px] text-arcade-green font-bold">
+                <span className="w-2 h-2 rounded-full bg-arcade-green animate-pulse" /> LIVE
+              </span>
+            </div>
+
+            <div className="space-y-2 h-64 overflow-hidden text-arcade-green text-[11px]">
+              {terminalLogs.map((log, idx) => (
+                <div key={idx} className="border-l-2 border-arcade-green/40 pl-3.5 py-0.5 truncate">
+                  {log}
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+        </div>
+      </section>
+
+      {/* ── 5.6 SYSTEM QUERIES (PART B: FAQ ACCORDION ITEMS WITH .SG-CARD) ────── */}
+      <section id="faq" className="relative z-10 py-24 px-6 bg-[#0B0F19]">
+        <div className="max-w-4xl mx-auto">
+          
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <span className="text-xs font-mono text-arcade-green uppercase tracking-widest font-semibold block mb-3">
+              // Parent Questions
+            </span>
+            <h2 className="font-display text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+              System Queries
+            </h2>
+          </div>
+
+          <div className="space-y-4">
+            {FAQ_ITEMS.map((item, idx) => {
+              const isOpen = activeFaq === idx;
+              return (
+                <motion.div 
+                  key={idx}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.1 }}
+                  transition={{ duration: 0.4, delay: idx * 0.08 }}
+                  className="sg-card overflow-hidden shadow-xl transition-all duration-300"
+                >
+                  <HudReticles />
+                  <button 
+                    onClick={() => setActiveFaq(isOpen ? null : idx)}
+                    className="w-full p-6 text-left flex items-center justify-between gap-4 cursor-pointer"
+                  >
+                    <span className="font-display text-base sm:text-lg font-bold text-white">{item.q}</span>
+                    <motion.div 
+                      animate={{ rotate: isOpen ? 180 : 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="text-arcade-green flex-shrink-0"
+                    >
+                      <ChevronDown size={20} />
+                    </motion.div>
+                  </button>
+
+                  <AnimatePresence>
+                    {isOpen && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-6 pb-6 pt-0 text-xs sm:text-sm text-white/90 leading-relaxed border-t border-white/10 mt-1 pt-4">
+                          {item.a}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── 5.7 FOOTER ────────────────────────────────────────────────── */}
+      <footer className="relative z-10 border-t border-white/10 pt-16 pb-12 px-6 bg-[#070A10]">
+        <div className="max-w-6xl mx-auto">
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+
+            {/* Branding */}
+            <div className="md:col-span-2 space-y-4">
+              <div className="flex items-center gap-3">
+                <SpellGateLogo size={32} />
+                <span className="font-display text-lg font-extrabold tracking-widest uppercase text-arcade-green">
+                  SpellGate
+                </span>
+              </div>
+              <p className="text-white/70 text-xs leading-relaxed max-w-sm">
+                An educational screen-time management system that gamifies spelling challenges to unlock PC access.
+              </p>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-arcade-green/10 border border-arcade-green/30 text-arcade-green text-[10px] font-mono">
+                <span className="w-2 h-2 rounded-full bg-arcade-green animate-ping" />
+                All Systems Operational
               </div>
             </div>
+
+            {/* Quick Links */}
             <div>
-              <p style={{ fontSize: '0.625rem', fontWeight: 750, letterSpacing: '0.1em', textTransform: 'uppercase', color: dim, marginBottom: '0.85rem' }}>Navigation</p>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-                {[...NAV_LINKS, { href: user ? '/dashboard' : '/login', label: user ? 'Dashboard' : 'Parent Login' }].map(l => (
-                  <li key={l.href}><a href={l.href} style={{ fontSize: '0.75rem', color: muted, textDecoration: 'none', transition: 'color 0.2s', fontWeight: 550 }}
-                    onMouseEnter={e => e.target.style.color = txt} onMouseLeave={e => e.target.style.color = muted}>{l.label}</a></li>
+              <h4 className="font-mono text-xs font-bold text-white/50 uppercase tracking-widest mb-4">Navigation</h4>
+              <ul className="space-y-2 text-xs">
+                {NAV_LINKS.map(link => (
+                  <li key={link.href}>
+                    <a href={link.href} className="text-white/80 hover:text-arcade-green transition-colors">
+                      {link.label}
+                    </a>
+                  </li>
                 ))}
+                <li>
+                  <Link to={user ? "/dashboard" : "/login"} className="text-white/80 hover:text-arcade-green transition-colors">
+                    Parent Dashboard
+                  </Link>
+                </li>
               </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="font-mono text-xs font-bold text-white/50 uppercase tracking-widest mb-4">Legal Framework</h4>
+              <ul className="space-y-2 text-xs">
+                <li>
+                  <button onClick={() => setShowPrivacyModal(true)} className="text-white/80 hover:text-arcade-green transition-colors cursor-pointer text-left">
+                    Privacy Policy
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => setShowTermsModal(true)} className="text-white/80 hover:text-arcade-green transition-colors cursor-pointer text-left">
+                    Terms of Service
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+          </div>
+
+          <div className="border-t border-white/10 pt-8 flex flex-wrap items-center justify-between gap-4 text-xs text-white/65 font-mono">
+            <div>
+              © {new Date().getFullYear()} SpellGate Security System. Open source GPLv3.
             </div>
             <div>
-              <p style={{ fontSize: '0.625rem', fontWeight: 750, letterSpacing: '0.1em', textTransform: 'uppercase', color: dim, marginBottom: '0.85rem' }}>Security & Legal</p>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-                <li>
-                  <button onClick={() => setShowPrivacyModal(true)} style={{ background: 'none', border: 'none', padding: 0, fontSize: '0.75rem', color: muted, textDecoration: 'none', transition: 'color 0.2s', fontWeight: 550, cursor: 'pointer', textAlign: 'left' }}
-                    onMouseEnter={e => e.target.style.color = txt} onMouseLeave={e => e.target.style.color = muted}>Privacy Policy</button>
-                </li>
-                <li>
-                  <button onClick={() => setShowTermsModal(true)} style={{ background: 'none', border: 'none', padding: 0, fontSize: '0.75rem', color: muted, textDecoration: 'none', transition: 'color 0.2s', fontWeight: 550, cursor: 'pointer', textAlign: 'left' }}
-                    onMouseEnter={e => e.target.style.color = txt} onMouseLeave={e => e.target.style.color = muted}>Terms of Service</button>
-                </li>
-              </ul>
+              Engineered by{' '}
+              <a
+                href="https://github.com/Hazy019"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-arcade-green hover:underline font-semibold"
+              >
+                Kyrell Santillan / Hazy019
+              </a>
             </div>
           </div>
-          <div style={{ borderTop: `1px solid ${brd}`, paddingTop: '1.25rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
-            <p style={{ fontSize: '0.6875rem', color: dim, margin: 0 }}>
-              © {new Date().getFullYear()} SpellGate Security System. Open source GPLv3. Developed by{' '}
-              <a 
-                href="https://github.com/Hazy019" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                style={{ 
-                  color: neon, 
-                  textDecoration: 'none', 
-                  borderBottom: `1px dashed ${neon}44`,
-                  transition: 'color 0.2s, border-color 0.2s',
-                  fontWeight: 600
-                }}
-                onMouseEnter={e => { e.target.style.color = '#fff'; e.target.style.borderColor = '#fff'; }}
-                onMouseLeave={e => { e.target.style.color = neon; e.target.style.borderColor = `${neon}44`; }}
-              >
-                Kyrell Santillan
-              </a>.
-            </p>
-            <p style={{ fontSize: '0.6875rem', color: dim, margin: 0 }}>Engineered for Grade 4 education</p>
-          </div>
+
         </div>
       </footer>
 
-      {/* Reusable Legal Modals containing clear human copy */}
+      {/* Legal Modals */}
       <LegalModal isOpen={showPrivacyModal} onClose={() => setShowPrivacyModal(false)} title="Privacy Policy">
-        <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Our Privacy Promise</p>
+        <h4 className="font-bold text-white">Our Privacy Promise</h4>
         <p>
           We built SpellGate because we believe technology should help kids learn, not track them.
           We do not sell, rent, share, or monetize your or your child's data. Ever.
         </p>
-        <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>What We Collect & Sync</p>
-        <ul style={{ listStyle: 'disc', paddingLeft: '1.25rem', spaceY: '0.25rem' }}>
+        <h4 className="font-bold text-white pt-2">What We Collect & Sync</h4>
+        <ul className="list-disc pl-5 space-y-1">
           <li>
-            <strong>Spelling Progress</strong>: We log the words your child spells correctly, their accuracy rates,
-            and session durations. This is sent to your private database so you can monitor them here.
+            <strong>Spelling Progress</strong>: We log words spelled correctly, accuracy rates, and session durations to your isolated Firestore database.
           </li>
           <li>
-            <strong>Time Bank State</strong>: We sync the amount of unlocked screen time they have earned so the child client knows when to lock again.
+            <strong>Time Bank State</strong>: We sync earned PC screen time allowance to lock/unlock the child client.
           </li>
         </ul>
-        <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>What Stays 100% Local</p>
+        <h4 className="font-bold text-white pt-2">Local Kiosk Security</h4>
         <p>
-          To prevent bypassing the lock screen, the Windows app monitors keyboard shortcuts (like Alt+Tab and Task Manager keys)
-          only when locking is active. This monitoring happens entirely on your child's PC. No keys are ever recorded, saved, or transmitted.
-        </p>
-        <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>Self-Hosted Data Ownership</p>
-        <p>
-          All synchronized data is stored directly in your own Firebase project. Only you—authenticated with your verified parent credentials—have permissions to access or edit this data.
+          Keyboard hooks (Alt+Tab, Task Manager) run entirely on your local PC. No keystrokes are ever recorded or transmitted.
         </p>
       </LegalModal>
 
       <LegalModal isOpen={showTermsModal} onClose={() => setShowTermsModal(false)} title="Terms of Service">
-        <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Welcome to SpellGate</p>
+        <h4 className="font-bold text-white">1. Parental Supervision</h4>
         <p>
-          By using SpellGate, you agree to these simple terms. We keep them short and clear because we respect your time.
+          SpellGate is a parental control tool. You determine multipliers and manage override passcodes.
         </p>
-        <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>1. Parental Supervision</p>
+        <h4 className="font-bold text-white pt-2">2. System Access</h4>
         <p>
-          SpellGate is a parental assistance tool. You determine the curriculum, set the play multipliers, and control the override passcodes.
-          It is your responsibility to monitor your child's use.
+          The Windows desktop client requires system-level hooks to block shortcuts and manage screen lock states.
         </p>
-        <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>2. OS-Level Device Controls</p>
+        <h4 className="font-bold text-white pt-2">3. Emergency Override</h4>
         <p>
-          The desktop app requires system-level permissions to hook keyboard shortcuts (Alt+Tab, Win keys) and manage Windows session state.
-          By installing, you authorize the app to lock the screen and restrict access based on active spelling tasks.
-        </p>
-        <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>3. Emergency Overrides</p>
-        <p>
-          We include a fail-safe parent passcode override shortcut (default: <kbd style={{ background: 'var(--input-bg)', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border-hi)' }}>Ctrl+Shift+P</kbd>).
-          You agree to keep this passcode secure from your child.
-        </p>
-        <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '1rem' }}>4. Free, Clean, Open Source</p>
-        <p>
-          SpellGate is open-source under the GPLv3 license. It contains zero ads, zero tracking scripts, and zero subscription fees.
-          You are free to compile the source code yourself.
+          Parents can bypass lock screens anytime using Ctrl+Shift+P and their master passcode.
         </p>
       </LegalModal>
+
     </div>
   );
-};
-
-export default App;
+}

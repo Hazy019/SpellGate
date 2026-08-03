@@ -49,7 +49,6 @@ class KioskManager:
 
         try:
             keyboard.block_key('windows')
-            keyboard.block_key('esc')
             
             # Suppress standard keyboard shortcuts
             keyboard.add_hotkey('alt+tab', lambda: None, suppress=True)
