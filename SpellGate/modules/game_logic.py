@@ -597,8 +597,12 @@ def get_next_words(progress_data, csv_path, count=12):
 from modules.security import secure_save_progress, secure_load_progress
 
 def save_progress(progress_data, file_path=USER_PROGRESS_FILE):
-    """Saves the player's Report Card to the JSON file securely."""
+    """Saves the player's Report Card to the JSON file securely and syncs to cloud."""
     secure_save_progress(progress_data, file_path)
+    
+    # Sync to dashboard
+    from modules.firebase_sync import sync_progress_to_cloud
+    sync_progress_to_cloud(progress_data)
 
 def load_progress(file_path=USER_PROGRESS_FILE):
     """Loads the player's Report Card from JSON securely."""

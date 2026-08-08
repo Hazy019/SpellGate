@@ -12,8 +12,8 @@ import { useAuth } from './AuthContext';
 /* ─────────────────────────────────────────────────────
    CONSTANTS & CONFIG
 ───────────────────────────────────────────────────── */
-const GITHUB_RELEASE_URL =
-  'https://github.com/Hazy019/SpellGate/releases/latest/download/SpellGateSetup.exe';
+// Served directly from the site's public folder — no GitHub redirect, works offline
+const INSTALLER_URL = '/SpellGateSetup.exe';
 
 const NAV_LINKS = [
   { href: '#hero', label: 'Home' },
@@ -313,13 +313,10 @@ export default function App() {
   }, []);
 
   const handleDownload = () => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
     setDownloading(true);
+    // Trigger a direct browser download from the bundled public file
     const a = document.createElement('a');
-    a.href = GITHUB_RELEASE_URL;
+    a.href = INSTALLER_URL;
     a.download = 'SpellGateSetup.exe';
     document.body.appendChild(a);
     a.click();

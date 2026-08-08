@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Activity, Settings, User, LogOut, Clock, Award, AlertCircle,
@@ -110,34 +110,31 @@ export default function Dashboard() {
   const [pairedDeviceStatus, setPairedDeviceStatus] = useState('unpaired'); // unpaired | pairing | paired
 
   // ── Persistent Sidebar Notifications state ────────────────────
-  const storageKey = uid ? `spellgate_notifs_${uid}` : 'spellgate_notifs_guest';
-  const [notifications, setNotifications] = useState(() => {
-    try {
-      const saved = localStorage.getItem('spellgate_notifs_guest');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-  const [notificationsOpen, setNotificationsOpen] = useState(true);
+  const [notifications, setNotifications] = useState([]);
+  const activeUidRef = useRef(undefined);
 
   // Load user-specific notifications when uid becomes available
   useEffect(() => {
-    if (!uid) return;
+    const storageKey = uid ? `spellgate_notifs_${uid}` : 'spellgate_notifs_guest';
     try {
-      const saved = localStorage.getItem(`spellgate_notifs_${uid}`);
-      if (saved) {
-        setNotifications(JSON.parse(saved));
-      }
-    } catch (e) {}
+      const saved = localStorage.getItem(storageKey);
+      setNotifications(saved ? JSON.parse(saved) : []);
+    } catch (e) {
+      setNotifications([]);
+    }
+    activeUidRef.current = uid;
   }, [uid]);
 
   // Persist notifications to localStorage whenever state changes
   useEffect(() => {
+    // Prevent saving if the uid context is currently shifting
+    if (activeUidRef.current !== uid) return; 
+    
+    const storageKey = uid ? `spellgate_notifs_${uid}` : 'spellgate_notifs_guest';
     try {
       localStorage.setItem(storageKey, JSON.stringify(notifications));
     } catch (e) {}
-  }, [notifications, storageKey]);
+  }, [notifications, uid]);
 
   // ── Live listener: Pending pairing code requests ─────────────
   useEffect(() => {
