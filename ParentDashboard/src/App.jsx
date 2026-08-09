@@ -12,8 +12,9 @@ import { useAuth } from './AuthContext';
 /* ─────────────────────────────────────────────────────
    CONSTANTS & CONFIG
 ───────────────────────────────────────────────────── */
-// Direct binary download from GitHub Releases (not a page redirect — browsers download this as a file)
-const INSTALLER_URL = 'https://github.com/Hazy019/SpellGate/releases/latest/download/SpellGateSetup.exe';
+// Direct binary download from local public bundle (with fallback to direct GitHub release tag v1.1.0)
+const INSTALLER_URL = '/SpellGateSetup.exe';
+const GITHUB_RELEASE_FALLBACK = 'https://github.com/Hazy019/SpellGate/releases/download/v1.1.0/SpellGateSetup.exe';
 
 const NAV_LINKS = [
   { href: '#hero', label: 'Home' },

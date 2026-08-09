@@ -169,14 +169,23 @@ def secure_load_time(file_path=TIME_BANK_FILE) -> int:
         if not os.path.exists(file_path):
             return 0
         with open(file_path, "rb") as f:
-            encrypted = f.read()
-        if not encrypted:
+            raw_data = f.read()
+        if not raw_data:
             return 0
-        decrypted = decrypt_dpapi(encrypted)
-        return int(decrypted.decode("utf-8"))
-    except Exception:
-        print("[Security] DPAPI Decryption failed for time_bank.txt. Resetting to 0.")
-        secure_save_time(0, file_path)
+        try:
+            decrypted = decrypt_dpapi(raw_data)
+            return int(decrypted.decode("utf-8"))
+        except Exception:
+            try:
+                val = int(raw_data.decode("utf-8").strip())
+                secure_save_time(val, file_path)
+                return val
+            except Exception:
+                print("[Security] DPAPI Decryption failed for time_bank.txt. Resetting to 0.")
+                secure_save_time(0, file_path)
+                return 0
+    except Exception as e:
+        print(f"[Security] Unexpected error loading time: {e}")
         return 0
 
 
@@ -206,13 +215,26 @@ def secure_load_progress(file_path=USER_PROGRESS_FILE) -> dict:
         if not os.path.exists(file_path):
             return fresh_progress
         with open(file_path, "rb") as f:
-            encrypted = f.read()
-        if not encrypted:
+            raw_data = f.read()
+        if not raw_data:
             return fresh_progress
-        decrypted = decrypt_dpapi(encrypted)
-        return json.loads(decrypted.decode("utf-8"))
-    except Exception:
-        print("[Security] DPAPI Decryption failed for user_progress.json. Resetting.")
-        secure_save_progress(fresh_progress, file_path)
+        
+        # 1. Attempt DPAPI decryption
+        try:
+            decrypted = decrypt_dpapi(raw_data)
+            return json.loads(decrypted.decode("utf-8"))
+        except Exception:
+            # 2. Fallback: parse as legacy unencrypted UTF-8 JSON
+            try:
+                data = json.loads(raw_data.decode("utf-8"))
+                secure_save_progress(data, file_path)
+                return data
+            except Exception:
+                print("[Security] Decryption/parsing failed for user_progress.json. Resetting.")
+                secure_save_progress(fresh_progress, file_path)
+                return fresh_progress
+    except Exception as e:
+        print(f"[Security] Unexpected error loading progress: {e}")
         return fresh_progress
+
 

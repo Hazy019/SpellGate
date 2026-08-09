@@ -20,6 +20,7 @@ def build():
     # Do NOT use --onefile flags here; the spec handles everything.
     cmd = [
         "pyinstaller",
+        "-y",               # overwrite output directory without prompt
         "--clean",          # clear previous build cache
         "SpellGate.spec",
     ]
@@ -35,7 +36,7 @@ def build():
         exe_path = os.path.abspath(os.path.join("dist", "SpellGate", "SpellGate.exe"))
         dist_dir = os.path.dirname(exe_path)
         size_mb = os.path.getsize(exe_path) / 1024 / 1024
-        print(f"✅ Build COMPLETE! SpellGate.exe = {size_mb:.1f} MB")
+        print(f"[OK] Build COMPLETE! SpellGate.exe = {size_mb:.1f} MB")
         print(f"   Folder: {dist_dir}")
         print()
         print("Next steps:")
