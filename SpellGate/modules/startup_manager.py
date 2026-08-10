@@ -169,30 +169,32 @@ def _install_startup_folder(exe_path: str):
 
 def install_to_startup():
     """
-    Register SpellGate with all available persistence mechanisms.
-    Tries the strongest method first, falls back on failure.
+    Register SpellGate with the strongest available persistence mechanism.
+    First removes existing entries to prevent duplicate instances at Windows logon.
 
-    Priority (strongest → weakest):
-      1. Task Scheduler  — restart policy, hidden, admin-hard-to-remove
-      2. HKLM Run key   — survives user-level deletion attempts
-      3. HKCU Run key   — always works, user-removable from Startup tab
-      4. Startup folder — last resort shortcut
-
-    All methods that succeed are registered simultaneously for redundancy.
+    Priority:
+      1. Task Scheduler  (Strongest — built-in auto-restart policy)
+      2. HKCU Run key    (Standard user startup entry)
+      3. Startup folder  (Fallback shortcut)
     """
     exe_path = _get_exe_path()
     print(f"[Startup] Registering persistence for: {exe_path}")
 
-    results = {
-        "task_scheduler": _install_task_scheduler(exe_path),
-        "hklm_run_key":   _install_hklm_run_key(exe_path),
-        "hkcu_run_key":   _install_hkcu_run_key(exe_path),
-        "startup_folder": _install_startup_folder(exe_path),
-    }
+    # Remove existing persistence entries first so we don't spawn duplicate processes
+    remove_from_startup()
 
-    successes = [k for k, v in results.items() if v]
-    print(f"[Startup] Active persistence methods: {', '.join(successes) or 'NONE — startup may not work!'}")
-    return len(successes) > 0
+    if _install_task_scheduler(exe_path):
+        print("[Startup] Task Scheduler persistence registered successfully.")
+        return True
+    elif _install_hkcu_run_key(exe_path):
+        print("[Startup] HKCU Run key persistence registered successfully.")
+        return True
+    elif _install_startup_folder(exe_path):
+        print("[Startup] Startup folder shortcut registered successfully.")
+        return True
+
+    print("[Startup] Warning: No persistence method could be installed.")
+    return False
 
 
 def remove_from_startup():

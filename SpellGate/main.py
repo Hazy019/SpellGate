@@ -283,8 +283,7 @@ class MainWindow(QMainWindow):
         # ── Data directories ─────────────────────────────────
         os.makedirs(os.path.dirname(TIME_BANK_FILE), exist_ok=True)
         if not os.path.exists(TIME_BANK_FILE):
-            with open(TIME_BANK_FILE, "w") as f:
-                f.write("0")
+            secure_save_time(0, TIME_BANK_FILE)
 
         progress_data = load_progress(USER_PROGRESS_FILE)
         self.current_avatar = progress_data.get("spaceship", None)
@@ -483,11 +482,34 @@ class MainWindow(QMainWindow):
             print("[Main] Incorrect PIN attempt.")
 
 
+import ctypes
+
+_SINGLE_INSTANCE_MUTEX = None
+
+def _ensure_single_instance(mutex_name="Global\\SpellGateSingleInstanceMutex") -> bool:
+    """Returns True if this is the only running instance of SpellGate."""
+    global _SINGLE_INSTANCE_MUTEX
+    try:
+        kernel32 = ctypes.windll.kernel32
+        _SINGLE_INSTANCE_MUTEX = kernel32.CreateMutexW(None, False, mutex_name)
+        last_error = kernel32.GetLastError()
+        ERROR_ALREADY_EXISTS = 183
+        if last_error == ERROR_ALREADY_EXISTS:
+            return False
+        return True
+    except Exception:
+        return True
+
+
 # ─────────────────────────────────────────────────────────────
 #  ENTRY POINT
 # ─────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    if not _ensure_single_instance():
+        print("[Main] SpellGate is already running. Terminating duplicate instance.")
+        sys.exit(0)
+
     # ── Normal launch ─────────────────────────────────────────────
     app = QApplication(sys.argv)
     window = MainWindow()

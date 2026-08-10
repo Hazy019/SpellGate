@@ -222,17 +222,24 @@ def secure_load_progress(file_path=USER_PROGRESS_FILE) -> dict:
         # 1. Attempt DPAPI decryption
         try:
             decrypted = decrypt_dpapi(raw_data)
-            return json.loads(decrypted.decode("utf-8"))
+            data = json.loads(decrypted.decode("utf-8"))
+            if isinstance(data, dict):
+                return data
         except Exception:
-            # 2. Fallback: parse as legacy unencrypted UTF-8 JSON
-            try:
-                data = json.loads(raw_data.decode("utf-8"))
+            pass
+            
+        # 2. Fallback: parse as legacy unencrypted UTF-8 JSON
+        try:
+            data = json.loads(raw_data.decode("utf-8"))
+            if isinstance(data, dict):
                 secure_save_progress(data, file_path)
                 return data
-            except Exception:
-                print("[Security] Decryption/parsing failed for user_progress.json. Resetting.")
-                secure_save_progress(fresh_progress, file_path)
-                return fresh_progress
+        except Exception:
+            pass
+
+        print("[Security] Decryption/parsing failed for user_progress.json. Resetting.")
+        secure_save_progress(fresh_progress, file_path)
+        return fresh_progress
     except Exception as e:
         print(f"[Security] Unexpected error loading progress: {e}")
         return fresh_progress

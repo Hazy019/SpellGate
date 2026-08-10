@@ -1232,11 +1232,7 @@ class ScrambledPhase(BaseScene):
         self.combo_streak = 0
         self.session_report = getattr(parent_window, "session_report", []) # Maintain report history
         
-        try:
-            with open(USER_PROGRESS_FILE, "r") as f:
-                self.progress_data = json.load(f)
-        except:
-            self.progress_data = {"mastered_words": [], "learning_pool": {}, "current_level": "Grade_4"}
+        self.progress_data = load_progress(USER_PROGRESS_FILE)
             
         self.initUI()
         self.apply_current_theme()
