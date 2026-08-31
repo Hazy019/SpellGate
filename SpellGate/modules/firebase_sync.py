@@ -20,6 +20,8 @@ _db           = None
 _parent_uid   = None
 _force_unlock_watch = None   # Firestore real-time listener handle
 _token_refresh_timer = None
+_heartbeat_stop_event = threading.Event()
+_heartbeat_thread = None
 
 # Offline queue — if sync fails, hold data and retry on next call
 _offline_queue = queue.Queue()
@@ -220,6 +222,8 @@ def _init_firestore_client(id_token, parent_uid):
     cred = credentials.Credentials(token=id_token)
     _db = firestore.Client(project=FIREBASE_PROJECT_ID, credentials=cred)
     print(f"[Firebase] [OK] Initialized Firestore for parent: {parent_uid}")
+    register_app_install()
+    start_heartbeat_daemon()
 
 def _schedule_token_refresh(refresh_token, expires_in):
     global _token_refresh_timer
@@ -319,7 +323,7 @@ def check_force_unlock(on_unlock_callback):
 # ─────────────────────────────────────────────────────────────
 
 def register_app_install():
-    """Send a heartbeat to Firestore so the Dashboard knows the app is installed."""
+    """Send an immediate heartbeat to Firestore so the Dashboard knows the app is installed/active."""
     if not _db or not _parent_uid:
         return
 
@@ -344,6 +348,44 @@ def register_app_install():
             print(f"[Firebase] Heartbeat failed: {e}")
 
     threading.Thread(target=_heartbeat, daemon=True).start()
+
+def start_heartbeat_daemon(interval: int = 45):
+    """Starts a background daemon thread pulsing heartbeats every `interval` seconds."""
+    global _heartbeat_thread, _heartbeat_stop_event
+    stop_heartbeat_daemon()
+    _heartbeat_stop_event.clear()
+
+    def _heartbeat_worker():
+        while not _heartbeat_stop_event.is_set():
+            if _db and _parent_uid:
+                try:
+                    doc_ref = (
+                        _db.collection('users')
+                           .document(_parent_uid)
+                           .collection('child_data')
+                           .document('device')
+                    )
+                    doc_ref.set({
+                        'installed':        True,
+                        'hostname':         platform.node(),
+                        'os_version':       platform.version(),
+                        'app_version':      '1.1.0',
+                        'last_heartbeat':   firestore.SERVER_TIMESTAMP,
+                    }, merge=True)
+                except Exception as e:
+                    pass
+            _heartbeat_stop_event.wait(interval)
+
+    _heartbeat_thread = threading.Thread(target=_heartbeat_worker, daemon=True)
+    _heartbeat_thread.start()
+    print("[Firebase] Heartbeat background daemon started.")
+
+def stop_heartbeat_daemon():
+    """Stops the recurring heartbeat background thread."""
+    global _heartbeat_thread, _heartbeat_stop_event
+    if _heartbeat_stop_event:
+        _heartbeat_stop_event.set()
+    _heartbeat_thread = None
 
 # ─────────────────────────────────────────────────────────────
 #  WRITE — Child progress UP to Firestore

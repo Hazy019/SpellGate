@@ -22,7 +22,8 @@ from modules.startup_manager import install_to_startup
 from modules.security import secure_save_time, secure_load_time, get_local_pin
 from modules.firebase_sync import (
     init_firebase, fetch_parent_pin, start_force_unlock_listener,
-    stop_force_unlock_listener
+    stop_force_unlock_listener, start_heartbeat_daemon, stop_heartbeat_daemon,
+    sync_progress_to_cloud
 )
 
 # ── Watchdog: internal daemon thread (no subprocess, no CMD window) ──
@@ -317,8 +318,9 @@ class MainWindow(QMainWindow):
         Runs on a background thread.
         1. Initialises Firebase (checks refresh token).
         2. If no valid token, shows Login Screen.
-        3. If valid, fetches parent PIN from Firestore and caches it.
-        4. Starts the real-time force-unlock listener.
+        3. If valid, starts continuous heartbeat daemon and syncs local progress.
+        4. Fetches parent PIN from Firestore and caches it.
+        5. Starts the real-time force-unlock listener.
         """
         try:
             connected = init_firebase()
@@ -327,6 +329,17 @@ class MainWindow(QMainWindow):
                 from PyQt6.QtCore import QTimer
                 QTimer.singleShot(0, self.show_login_screen)
                 return
+
+            # Start continuous heartbeat daemon
+            start_heartbeat_daemon()
+
+            # Sync current local progress to cloud so dashboard is immediately up to date
+            try:
+                local_progress = load_progress(USER_PROGRESS_FILE)
+                if local_progress:
+                    sync_progress_to_cloud(local_progress)
+            except Exception as e:
+                print(f"[Main] Initial progress sync warning: {e}")
 
             # Fetch PIN (Firestore → also caches in Credential Manager)
             cloud_pin = fetch_parent_pin()
@@ -472,6 +485,7 @@ class MainWindow(QMainWindow):
             # Authorise exit so the watchdog doesn't fight us
             self._watchdog.authorize_exit()
             self._heartbeat_timer.stop()
+            stop_heartbeat_daemon()
             stop_force_unlock_listener()
 
             self.kiosk.disable_kiosk_mode()

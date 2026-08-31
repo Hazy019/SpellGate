@@ -28,15 +28,15 @@ function StatCard({ icon, color, label, value, sub }) {
       style={{ background: c.bg, border: `1px solid ${c.border}` }}
     >
       <div
-        className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
         style={{ background: 'rgba(255,255,255,0.06)', color: c.text }}
       >
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-[0.625rem] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-dim)' }}>{label}</p>
-        <p className="text-xl font-bold font-mono leading-none mb-1" style={{ color: c.text }}>{value}</p>
-        <p className="text-[0.625rem] font-medium" style={{ color: 'var(--text-muted)', opacity: 0.7 }}>{sub}</p>
+        <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-dim)' }}>{label}</p>
+        <p className="text-2xl font-bold font-mono leading-none mb-1.5" style={{ color: c.text }}>{value}</p>
+        <p className="text-xs font-medium" style={{ color: 'var(--text-muted)', opacity: 0.85 }}>{sub}</p>
       </div>
     </div>
   );
@@ -573,14 +573,14 @@ export default function Dashboard() {
               SPELLGATE
             </h2>
           </div>
-          <p className="text-[0.6875rem] font-semibold text-text-muted tracking-wider uppercase opacity-60">Parent Administration</p>
+          <p className="text-xs font-semibold text-text-muted tracking-wider uppercase opacity-70">Parent Administration</p>
 
           {/* Sync status badge */}
           <div className={`mt-3 self-start inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
             isLive ? 'bg-mint/10 text-mint border border-mint/20'
                    : 'bg-white/5 text-text-muted border border-white/10'
           }`}>
-            {isLive ? <Wifi className="w-3 h-3 animate-pulse" /> : <WifiOff className="w-3 h-3" />}
+            {isLive ? <Wifi className="w-3.5 h-3.5 animate-pulse" /> : <WifiOff className="w-3.5 h-3.5" />}
             {isLive ? 'Link Active' : 'Offline'}
           </div>
         </div>
@@ -606,7 +606,7 @@ export default function Dashboard() {
                 <span className="truncate">{label}</span>
               </div>
               {badge > 0 && (
-                <span className="px-2 py-0.5 text-[0.625rem] font-bold font-mono rounded-full bg-neon/20 border border-neon/40 text-neon">
+                <span className="px-2 py-0.5 text-xs font-bold font-mono rounded-full bg-neon/20 border border-neon/40 text-neon">
                   {badge}
                 </span>
               )}
@@ -617,13 +617,13 @@ export default function Dashboard() {
         {/* ── Sidebar Quick Notifications Card ── */}
         <div className="p-4 border-t border-white/5 flex-shrink-0">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[0.6875rem] font-bold text-text-dim uppercase tracking-wider">
+            <span className="text-xs font-bold text-text-dim uppercase tracking-wider">
               Quick Alerts
             </span>
             {notifications.length > 0 && (
               <button
                 onClick={() => setNotifications([])}
-                className="text-[0.625rem] text-text-dim hover:text-red-400 font-bold transition-colors cursor-pointer"
+                className="text-xs text-text-dim hover:text-red-400 font-bold transition-colors cursor-pointer"
               >
                 Clear
               </button>
@@ -633,10 +633,10 @@ export default function Dashboard() {
           {notifications.length === 0 ? (
             <div className="bg-panel border border-white/10 rounded-2xl p-3.5 text-center flex flex-col items-center justify-center gap-1 shadow-sm">
               <div className="w-7 h-7 rounded-full bg-mint/10 border border-mint/20 flex items-center justify-center text-mint mx-auto mb-0.5">
-                <ShieldCheck className="w-3.5 h-3.5" />
+                <ShieldCheck className="w-4 h-4" />
               </div>
               <p className="text-xs font-bold text-text-primary">All Systems Clear</p>
-              <p className="text-[0.625rem] text-text-muted">No pending pairing requests</p>
+              <p className="text-xs text-text-muted">No pending pairing requests</p>
             </div>
           ) : (
             <div className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
@@ -652,29 +652,29 @@ export default function Dashboard() {
                   }`}
                 >
                   <div className="flex items-start justify-between gap-1 mb-1">
-                    <span className="font-bold text-[0.725rem] leading-snug">{n.title}</span>
+                    <span className="font-bold text-xs leading-snug">{n.title}</span>
                     <button
                       onClick={() => handleDismissNotification(n.id)}
                       className="text-text-dim hover:text-white p-0.5 cursor-pointer"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <p className="text-[0.6875rem] text-text-muted leading-tight mb-2">{n.message}</p>
+                  <p className="text-xs text-text-muted leading-tight mb-2">{n.message}</p>
 
                   {n.type === 'pairing_request' && !n.confirmed && (
                     <button
                       onClick={() => handleConfirmPairing(n)}
-                      className="w-full py-1.5 px-2 rounded-lg bg-gradient-to-r from-neon to-cyber-purple text-ink font-bold text-[0.6875rem] flex items-center justify-center gap-1 shadow-sm hover:opacity-90 transition-opacity cursor-pointer"
+                      className="w-full py-1.5 px-2 rounded-lg bg-gradient-to-r from-neon to-cyber-purple text-ink font-bold text-xs flex items-center justify-center gap-1 shadow-sm hover:opacity-90 transition-opacity cursor-pointer"
                     >
-                      <Check className="w-3 h-3" />
+                      <Check className="w-3.5 h-3.5" />
                       Accept Confirmation
                     </button>
                   )}
 
                   {n.confirmed && (
-                    <span className="inline-flex items-center gap-1 text-[0.625rem] text-mint font-bold">
-                      <CheckCircle className="w-3 h-3" /> Confirmed
+                    <span className="inline-flex items-center gap-1 text-xs text-mint font-bold">
+                      <CheckCircle className="w-3.5 h-3.5" /> Confirmed
                     </span>
                   )}
                 </div>
@@ -723,13 +723,13 @@ export default function Dashboard() {
             {/* Top row: Title & Quick Stats */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 flex-shrink-0">
               <div>
-                <h1 className="text-2xl font-bold text-text-primary tracking-tight font-display">Dashboard Activity</h1>
-                <p className="text-text-muted text-xs">Monitor child's real-time accuracy and game interactions.</p>
+                <h1 className="text-2xl md:text-3xl font-bold text-text-primary tracking-tight font-display">Dashboard Activity</h1>
+                <p className="text-text-muted text-sm mt-0.5">Monitor child's real-time accuracy and game interactions.</p>
               </div>
               
               <div className="flex items-center gap-3">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyber-purple/10 border border-cyber-purple/20 text-cyber-purple text-[0.6875rem] font-bold uppercase tracking-wider">
-                  <Award className="w-3.5 h-3.5" />
+                <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-cyber-purple/10 border border-cyber-purple/20 text-cyber-purple text-xs font-bold uppercase tracking-wider">
+                  <Award className="w-4 h-4" />
                   Grade Level: <span className="text-text-primary ml-0.5">{currentLevel}</span>
                 </div>
               </div>
@@ -744,21 +744,21 @@ export default function Dashboard() {
                 {/* Stats row */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-shrink-0">
                   <StatCard 
-                    icon={<Award className="w-4 h-4" />} 
+                    icon={<Award className="w-5 h-5" />} 
                     color="cyber-blue" 
                     label="Mastered Words" 
                     value={masteredCount} 
                     sub="Cumulative database bank" 
                   />
                   <StatCard 
-                    icon={<Activity className="w-4 h-4" />} 
+                    icon={<Activity className="w-5 h-5" />} 
                     color="cyber-purple" 
                     label="Session Accuracy" 
                     value={`${accuracy}%`} 
                     sub="Last practice rate" 
                   />
                   <StatCard 
-                    icon={<Clock className="w-4 h-4" />} 
+                    icon={<Clock className="w-5 h-5" />} 
                     color="cyber-pink" 
                     label="Time Bank Earned"
                     value={`${Math.floor(timeEarned / 60)}m ${timeEarned % 60}s`} 
@@ -772,17 +772,17 @@ export default function Dashboard() {
                   {/* Left curve (3/5 width) */}
                   <div className="md:col-span-3 glass rounded-2xl p-5 border border-white/5 flex flex-col justify-between">
                     <div className="flex-shrink-0">
-                      <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                      <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider mb-3 flex items-center gap-1.5">
                         <Activity className="w-4 h-4 text-cyber-purple" /> Spelling Curve
                       </h3>
-                      <div className="grid grid-cols-2 gap-3 bg-ink/30 border border-white/5 p-3 rounded-lg text-[0.6875rem]">
+                      <div className="grid grid-cols-2 gap-3 bg-ink/30 border border-white/5 p-3.5 rounded-lg text-xs">
                         <div>
-                          <span className="text-text-dim block">Lifetime Average:</span>
-                          <span className="font-mono font-bold text-text-primary text-sm mt-0.5">{avgAccuracy}%</span>
+                          <span className="text-text-dim text-xs block font-medium">Lifetime Average:</span>
+                          <span className="font-mono font-bold text-text-primary text-base mt-0.5 block">{avgAccuracy}%</span>
                         </div>
                         <div>
-                          <span className="text-text-dim block">Deviation:</span>
-                          <span className={`font-mono font-bold text-sm mt-0.5 ${accuracyDelta >= 0 ? 'text-mint' : 'text-red-400'}`}>
+                          <span className="text-text-dim text-xs block font-medium">Deviation:</span>
+                          <span className={`font-mono font-bold text-base mt-0.5 block ${accuracyDelta >= 0 ? 'text-mint' : 'text-red-400'}`}>
                             {accuracyDelta >= 0 ? `+${accuracyDelta}%` : `${accuracyDelta}%`}
                           </span>
                         </div>
@@ -800,24 +800,24 @@ export default function Dashboard() {
                               }`} 
                               style={{ height: `${s.accuracy}%`, opacity: idx === sessions.slice(-7).length - 1 ? 1 : 0.4 }} 
                             />
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1 py-0.5 rounded bg-black/80 text-[0.5625rem] text-white font-mono opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none">
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 rounded bg-black/80 text-xs text-white font-mono opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none">
                               {s.accuracy}%
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-text-dim text-xs py-6">No historical sessions to chart.</p>
+                      <p className="text-text-muted text-sm py-6">No historical sessions to chart.</p>
                     )}
                   </div>
 
                   {/* Right Gemini Advisor (2/5 width) */}
                   <div className="md:col-span-2 glass rounded-2xl p-5 border border-neon/15 bg-neon/5 flex flex-col justify-between">
                     <div className="flex-shrink-0 flex items-center gap-1.5 mb-2 pb-2 border-b border-neon/10">
-                      <Brain className="w-3.5 h-3.5 text-neon" />
-                      <span className="text-[0.625rem] font-bold text-neon uppercase tracking-wider font-mono">Gemini Advisor</span>
+                      <Brain className="w-4 h-4 text-neon" />
+                      <span className="text-xs font-bold text-neon uppercase tracking-wider font-mono">Gemini Advisor</span>
                     </div>
-                    <div className="flex-1 overflow-y-auto pr-1 text-[0.725rem] text-text-muted leading-relaxed max-h-[140px] scrollbar-thin">
+                    <div className="flex-1 overflow-y-auto pr-1 text-sm text-text-muted leading-relaxed max-h-[140px] scrollbar-thin">
                       {sessions.length === 0 ? (
                         "Waiting for completed spelling sessions to compile diagnostics."
                       ) : accuracy >= 90 ? (
@@ -828,9 +828,9 @@ export default function Dashboard() {
                         "Child is experiencing blocks on recent tests. System recommends lowering playground exchange rates to prolong local study durations."
                       )}
                     </div>
-                    <div className="flex-shrink-0 text-[0.5625rem] text-text-dim uppercase tracking-wider font-bold mt-2 pt-2 border-t border-neon/10 flex justify-between">
+                    <div className="flex-shrink-0 text-xs text-text-dim uppercase tracking-wider font-bold mt-2 pt-2 border-t border-neon/10 flex justify-between">
                       <span>Study Target</span>
-                      <span className="text-neon">Grade 4 Level II</span>
+                      <span className="text-neon font-semibold">Grade 4 Level II</span>
                     </div>
                   </div>
                 </div>
@@ -839,18 +839,18 @@ export default function Dashboard() {
                   
                   {/* Struggle words */}
                   <div className="glass rounded-2xl p-4 border border-white/5 flex flex-col min-h-[120px]">
-                    <span className="text-[0.625rem] font-bold text-text-dim uppercase tracking-wider mb-2 block">Struggle Words</span>
+                    <span className="text-xs font-bold text-text-dim uppercase tracking-wider mb-2 block">Struggle Words</span>
                     <div className="flex-1 overflow-y-auto pr-1 text-left">
                       {struggleWords.length > 0 ? (
                         <div className="flex flex-wrap gap-1.5">
                           {struggleWords.map((word, i) => (
-                            <span key={i} className="font-mono text-[0.6875rem] text-text-primary px-2 py-0.5 rounded bg-white/5 border border-white/10 hover-amber transition-all">
+                            <span key={i} className="font-mono text-xs text-text-primary px-2.5 py-1 rounded bg-white/5 border border-white/10 hover-amber transition-all">
                               {word}
                             </span>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-text-dim text-[0.6875rem] leading-relaxed">
+                        <p className="text-text-muted text-sm leading-relaxed">
                           {progressData ? 'All words spelled correctly. Outstanding job!' : 'Waiting for completed sessions.'}
                         </p>
                       )}
@@ -859,18 +859,18 @@ export default function Dashboard() {
 
                   {/* Recent sessions */}
                   <div className="glass rounded-2xl p-4 border border-white/5 flex flex-col min-h-[120px]">
-                    <span className="text-[0.625rem] font-bold text-text-dim uppercase tracking-wider mb-2 block">Recent Session Logs</span>
+                    <span className="text-xs font-bold text-text-dim uppercase tracking-wider mb-2 block">Recent Session Logs</span>
                     <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 text-left">
                       {sessions.length > 0 ? (
                         [...sessions].reverse().slice(0, 3).map((s, i) => (
-                          <div key={i} className="flex justify-between bg-ink/30 border border-white/5 rounded px-2.5 py-1 text-[0.6875rem]">
+                          <div key={i} className="flex justify-between items-center bg-ink/30 border border-white/5 rounded px-3 py-1.5 text-xs">
                             <span className="text-text-muted">{s.date ?? `Session ${sessions.length - i}`}</span>
                             <span className="text-neon font-bold">{s.accuracy}% accuracy</span>
-                            <span className="text-mint font-semibold bg-mint/5 border border-mint/10 px-1.5 py-0.25 rounded">{Math.floor((s.time_earned_seconds ?? 0) / 60)}m</span>
+                            <span className="text-mint font-semibold bg-mint/5 border border-mint/10 px-2 py-0.5 rounded">{Math.floor((s.time_earned_seconds ?? 0) / 60)}m</span>
                           </div>
                         ))
                       ) : (
-                        <p className="text-text-dim text-[0.6875rem]">No logs recorded yet.</p>
+                        <p className="text-text-muted text-sm">No logs recorded yet.</p>
                       )}
                     </div>
                   </div>
@@ -887,15 +887,15 @@ export default function Dashboard() {
                   {/* Header */}
                   <div className="flex-shrink-0 flex items-center justify-between pb-4 border-b border-white/5">
                     <div className="flex items-center gap-2">
-                      <Laptop className="w-4.5 h-4.5 text-neon" />
-                      <h2 className="text-xs font-bold tracking-tight text-text-primary font-display">Kiosk Status</h2>
+                      <Laptop className="w-5 h-5 text-neon" />
+                      <h2 className="text-sm font-bold tracking-tight text-text-primary font-display">Kiosk Status</h2>
                     </div>
                     
                     <div className="flex items-center gap-2">
                       <span className={`w-2.5 h-2.5 rounded-full ${
                         isDeviceOnline ? 'bg-mint animate-pulse shadow-[0_0_12px_rgba(61,255,160,0.8)]' : 'bg-text-dim'
                       }`} />
-                      <span className="text-[0.625rem] font-bold uppercase tracking-wider text-text-muted">
+                      <span className="text-xs font-bold uppercase tracking-wider text-text-muted">
                         {isDeviceOnline ? 'Connected' : 'Offline'}
                       </span>
                     </div>
@@ -903,16 +903,16 @@ export default function Dashboard() {
 
                   {/* Laptop Mockup */}
                   <div className="flex-1 min-h-0 py-4 flex flex-col justify-center">
-                    <div className="w-full bg-ink/80 rounded-lg border border-white/5 p-3 flex flex-col items-center justify-center gap-2 py-4 relative">
+                    <div className="w-full bg-ink/80 rounded-lg border border-white/5 p-3.5 flex flex-col items-center justify-center gap-2 py-4 relative">
                       <div className="w-14 h-10 rounded border border-neon/20 flex items-center justify-center bg-neon/5 relative">
-                        <Cpu className={`w-5 h-5 text-neon ${isDeviceOnline ? 'animate-pulse' : 'opacity-40'}`} />
+                        <Cpu className={`w-6 h-6 text-neon ${isDeviceOnline ? 'animate-pulse' : 'opacity-40'}`} />
                         <div className="absolute -bottom-1.5 w-6 h-1 bg-white/20 rounded" />
                       </div>
                       <div className="text-center overflow-hidden w-full">
-                        <p className="text-xs font-bold tracking-wide text-text-primary truncate px-2">
+                        <p className="text-sm font-bold tracking-wide text-text-primary truncate px-2">
                           {deviceData?.hostname ?? 'NO PAIRING'}
                         </p>
-                        <p className="text-[0.5625rem] text-text-muted font-mono opacity-50">
+                        <p className="text-xs text-text-muted font-mono opacity-60">
                           {deviceData?.os_version ? `Win ${deviceData.os_version.split('.')[0]}` : 'Disconnected'}
                         </p>
                       </div>
@@ -920,7 +920,7 @@ export default function Dashboard() {
                   </div>
 
                   {/* Details metadata */}
-                  <div className="flex-shrink-0 space-y-2.5 text-[0.6875rem] border-b border-white/5 pb-4 mb-4">
+                  <div className="flex-shrink-0 space-y-2.5 text-xs border-b border-white/5 pb-4 mb-4">
                     <div className="flex justify-between">
                       <span className="text-text-muted">App Version:</span>
                       <span className="font-mono text-text-primary font-medium">{deviceData?.app_version ?? '--'}</span>
@@ -944,12 +944,12 @@ export default function Dashboard() {
                     <button
                       onClick={handleForceUnlock}
                       disabled={!isDeviceOnline}
-                      className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-red-500/10 border border-red-500/20 text-red-400 font-bold text-xs rounded-lg hover:bg-red-500/20 hover:border-red-500/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-red-500/10 border border-red-500/20 text-red-400 font-bold text-sm rounded-lg hover:bg-red-500/20 hover:border-red-500/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      <Unlock className="w-3.5 h-3.5" />
+                      <Unlock className="w-4 h-4" />
                       Force Unlock PC
                     </button>
-                    <p className="text-[0.5625rem] text-text-dim text-center">
+                    <p className="text-xs text-text-dim text-center">
                       {!isDeviceOnline ? '⚠️ PC Offline' : 'Immediate remote override command.'}
                     </p>
                   </div>
@@ -977,7 +977,7 @@ export default function Dashboard() {
                     <Clock className="w-5 h-5 text-neon" />
                     Playtime Exchange Rate
                   </h2>
-                  <p className="text-text-muted text-xs mb-5">
+                  <p className="text-text-muted text-sm mb-5">
                     Specify the exact amount of computer access time awarded for every correct spelling response.
                   </p>
 
@@ -985,12 +985,12 @@ export default function Dashboard() {
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-5">
                       <div className="flex flex-col items-center bg-white/5 px-4 py-3 rounded-lg border border-white/10 w-full sm:w-[45%]">
                         <span className="text-3xl font-mono font-bold text-neon mb-0.5">1</span>
-                        <span className="text-[0.625rem] text-text-muted uppercase tracking-wider font-semibold opacity-70">Correct Word</span>
+                        <span className="text-xs text-text-muted uppercase tracking-wider font-semibold opacity-80">Correct Word</span>
                       </div>
-                      <div className="text-sm text-text-dim font-bold font-mono">=</div>
+                      <div className="text-base text-text-dim font-bold font-mono">=</div>
                       <div className="flex flex-col items-center bg-neon/5 px-4 py-3 rounded-lg border border-neon/20 w-full sm:w-[45%]">
                         <span className="text-3xl font-mono font-bold text-neon mb-0.5">{multiplier}s</span>
-                        <span className="text-[0.625rem] text-neon/80 uppercase tracking-wider font-semibold">Screen Time</span>
+                        <span className="text-xs text-neon/90 uppercase tracking-wider font-semibold">Screen Time</span>
                       </div>
                     </div>
 
@@ -998,9 +998,9 @@ export default function Dashboard() {
                       type="range" min="5" max="60" step="5"
                       value={multiplier}
                       onChange={(e) => setMultiplier(parseInt(e.target.value))}
-                      className="w-full accent-neon"
+                      className="w-full accent-neon cursor-pointer"
                     />
-                    <div className="flex justify-between mt-2.5 text-[0.6875rem] font-semibold text-text-dim">
+                    <div className="flex justify-between mt-2.5 text-xs font-semibold text-text-dim">
                       <span className="cursor-pointer hover:text-text-primary" onClick={() => setMultiplier(5)}>5s (Strict)</span>
                       <span className="cursor-pointer hover:text-text-primary" onClick={() => setMultiplier(30)}>30s (Balanced)</span>
                       <span className="cursor-pointer hover:text-text-primary" onClick={() => setMultiplier(60)}>60s (Generous)</span>
@@ -1009,9 +1009,9 @@ export default function Dashboard() {
 
                   <div className="flex items-start gap-2.5 p-3.5 bg-neon/5 border border-neon/15 rounded-lg mb-5">
                     <Activity className="w-4 h-4 text-neon flex-shrink-0 mt-0.5" />
-                    <p className="text-text-muted text-[0.6875rem] leading-relaxed">
+                    <p className="text-text-muted text-xs leading-relaxed">
                       Calculated projection: completing a standard <strong>10-word</strong> session will award exactly{' '}
-                      <strong>{Math.floor((10 * multiplier) / 60)}m{' '}
+                      <strong className="text-text-primary">{Math.floor((10 * multiplier) / 60)}m{' '}
                       {(10 * multiplier) % 60 > 0 ? `${(10 * multiplier) % 60}s` : ''}</strong> of computer time.
                     </p>
                   </div>
@@ -1020,9 +1020,9 @@ export default function Dashboard() {
                 <button
                   onClick={handleSaveSettings}
                   disabled={saveStatus === 'saving'}
-                  className="btn-primary press-effect w-full py-2.5 text-xs font-bold"
+                  className="btn-primary press-effect w-full py-2.5 text-sm font-bold"
                 >
-                  {saveStatus === 'saving' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  {saveStatus === 'saving' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   {saveStatus === 'saved' ? 'Settings Saved!' : saveStatus === 'saving' ? 'Saving…' : 'Save Rules'}
                 </button>
               </div>
@@ -1034,14 +1034,14 @@ export default function Dashboard() {
                     <Key className="w-5 h-5 text-cyber-purple" />
                     Emergency Override PIN
                   </h2>
-                  <p className="text-text-muted text-xs mb-5">
+                  <p className="text-text-muted text-sm mb-5">
                     Required to exit Kiosk Lock mode on your child's PC via <strong>Ctrl+Shift+P</strong>. Keep it confidential.
                   </p>
 
                   {currentPin && (
                     <div className="bg-ink/40 border border-white/5 rounded-xl p-4 mb-5">
-                      <p className="text-[0.625rem] text-text-dim uppercase tracking-widest mb-2 font-bold flex items-center gap-1">
-                        <ShieldCheck className="w-3 h-3 text-cyber-purple" /> Active Lock Passcode
+                      <p className="text-xs text-text-dim uppercase tracking-wider mb-2 font-bold flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5 text-cyber-purple" /> Active Lock Passcode
                       </p>
                       <div className="flex items-center gap-3">
                         <span className="text-2xl font-mono font-black tracking-[0.25em] text-cyber-purple">
@@ -1051,7 +1051,7 @@ export default function Dashboard() {
                           onClick={() => setPinVisible(v => !v)}
                           className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-text-muted"
                         >
-                          {pinVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          {pinVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
@@ -1059,7 +1059,7 @@ export default function Dashboard() {
 
                   <div className="space-y-3.5">
                     <div className="field-group">
-                      <label className="text-[0.6875rem]">New 4-8 Digit PIN</label>
+                      <label className="text-xs font-semibold text-text-dim">New 4-8 Digit PIN</label>
                       <input
                         type="password"
                         inputMode="numeric"
@@ -1071,7 +1071,7 @@ export default function Dashboard() {
                       />
                     </div>
                     <div className="field-group">
-                      <label className="text-[0.6875rem]">Confirm New PIN</label>
+                      <label className="text-xs font-semibold text-text-dim">Confirm New PIN</label>
                       <input
                         type="password"
                         inputMode="numeric"
@@ -1085,7 +1085,7 @@ export default function Dashboard() {
 
                     {pinError && (
                       <p className="text-red-400 text-xs flex items-center gap-1 font-medium">
-                        <AlertCircle className="w-3.5 h-3.5" /> {pinError}
+                        <AlertCircle className="w-4 h-4" /> {pinError}
                       </p>
                     )}
                   </div>
@@ -1094,9 +1094,9 @@ export default function Dashboard() {
                 <button
                   onClick={handleSavePin}
                   disabled={pinSaveStatus === 'saving'}
-                  className="btn-primary press-effect w-full py-2.5 text-xs font-bold bg-gradient-to-r from-cyber-purple to-neon text-white border-none shadow-sm mt-5"
+                  className="btn-primary press-effect w-full py-2.5 text-sm font-bold bg-gradient-to-r from-cyber-purple to-neon text-white border-none shadow-sm mt-5"
                 >
-                  {pinSaveStatus === 'saving' && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  {pinSaveStatus === 'saving' && <RefreshCw className="w-4 h-4 animate-spin" />}
                   {pinSaveStatus === 'saved' ? 'PIN Configured!' : pinSaveStatus === 'saving' ? 'Processing…' : 'Set Override PIN'}
                 </button>
               </div>
@@ -1108,7 +1108,7 @@ export default function Dashboard() {
                     <Link2 className="w-5 h-5 text-neon" />
                     Device Pairing
                   </h2>
-                  <p className="text-text-muted text-xs leading-relaxed">
+                  <p className="text-text-muted text-sm leading-relaxed">
                     Pair your child's PC client with this parent dashboard securely. 
                     This registers the child's PC client as an authorized companion device without exposing your account password.
                   </p>
@@ -1118,9 +1118,9 @@ export default function Dashboard() {
                   {settingsData?.paired_device_uid ? (
                     <div className="space-y-3">
                       <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-mint/10 border border-mint/20 text-mint text-xs font-bold uppercase tracking-wider">
-                        <CheckCircle className="w-3.5 h-3.5" /> Paired Successfully
+                        <CheckCircle className="w-4 h-4" /> Paired Successfully
                       </div>
-                      <p className="text-[0.625rem] text-text-dim uppercase tracking-wider font-semibold">
+                      <p className="text-xs text-text-dim uppercase tracking-wider font-semibold">
                         Device UID: {settingsData.paired_device_uid.slice(0, 12)}...
                       </p>
                       <button
@@ -1131,16 +1131,16 @@ export default function Dashboard() {
                             });
                           }
                         }}
-                        className="text-[0.6875rem] text-red-400 font-bold hover:underline cursor-pointer"
+                        className="text-xs text-red-400 font-bold hover:underline cursor-pointer"
                       >
                         Unpair Device
                       </button>
                     </div>
                   ) : pairingCode ? (
                     <div className="space-y-2">
-                      <p className="text-[0.625rem] text-neon uppercase tracking-wider font-bold animate-pulse">Pairing Code Active</p>
+                      <p className="text-xs text-neon uppercase tracking-wider font-bold animate-pulse">Pairing Code Active</p>
                       <span className="text-3xl font-mono font-black tracking-[0.25em] text-neon block">{pairingCode}</span>
-                      <p className="text-[0.5625rem] text-text-muted leading-normal">
+                      <p className="text-xs text-text-muted leading-normal">
                         Enter this code on the child's PC client within 5 minutes.
                       </p>
                     </div>
@@ -1148,9 +1148,9 @@ export default function Dashboard() {
                     <button
                       onClick={handleGeneratePairingCode}
                       disabled={pairingLoading}
-                      className="btn-primary press-effect w-full py-2.5 text-xs font-bold bg-gradient-to-r from-neon to-cyber-purple text-ink border-none shadow-sm cursor-pointer"
+                      className="btn-primary press-effect w-full py-2.5 text-sm font-bold bg-gradient-to-r from-neon to-cyber-purple text-ink border-none shadow-sm cursor-pointer"
                     >
-                      {pairingLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />}
+                      {pairingLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
                       Generate Pairing Code
                     </button>
                   )}
@@ -1201,20 +1201,20 @@ export default function Dashboard() {
                             </div>
                             <div>
                               <p className="text-sm font-bold text-text-primary">{n.title}</p>
-                              <p className="text-xs text-text-muted mt-0.5">{n.message}</p>
-                              <span className="text-[0.625rem] font-mono text-neon/80 block mt-1">Code: {n.code} · Requested at {n.timestamp}</span>
+                              <p className="text-sm text-text-muted mt-0.5">{n.message}</p>
+                              <span className="text-xs font-mono text-neon/90 block mt-1">Code: {n.code} · Requested at {n.timestamp}</span>
                             </div>
                           </div>
 
                           {!n.confirmed ? (
                             <button
                               onClick={() => handleConfirmPairing(n)}
-                              className="btn-primary press-effect px-5 py-2.5 text-xs font-bold bg-gradient-to-r from-neon to-cyber-purple text-ink border-none flex items-center gap-1.5 cursor-pointer flex-shrink-0"
+                              className="btn-primary press-effect px-5 py-2.5 text-sm font-bold bg-gradient-to-r from-neon to-cyber-purple text-ink border-none flex items-center gap-1.5 cursor-pointer flex-shrink-0"
                             >
                               <Check className="w-4 h-4" /> Accept Confirmation
                             </button>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-mint/10 border border-mint/20 text-mint text-xs font-bold">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-mint/10 border border-mint/20 text-mint text-sm font-bold">
                               <CheckCircle className="w-4 h-4" /> Confirmed
                             </span>
                           )}
@@ -1234,15 +1234,15 @@ export default function Dashboard() {
                   </h2>
 
                   {notifications.filter(n => n.type === 'achievement').length === 0 ? (
-                    <p className="text-xs text-text-muted italic py-4 text-center">No achievements recorded yet.</p>
+                    <p className="text-sm text-text-muted italic py-4 text-center">No achievements recorded yet.</p>
                   ) : (
                     <div className="space-y-3">
                       {notifications.filter(n => n.type === 'achievement').map(n => (
                         <div key={n.id} className="bg-amber/5 border border-amber/20 rounded-xl p-3.5 flex items-start gap-3">
                           <Sparkles className="w-4 h-4 text-amber flex-shrink-0 mt-0.5" />
                           <div>
-                            <p className="text-xs font-bold text-text-primary">{n.title}</p>
-                            <p className="text-[0.6875rem] text-text-muted mt-0.5">{n.message}</p>
+                            <p className="text-sm font-bold text-text-primary">{n.title}</p>
+                            <p className="text-xs text-text-muted mt-0.5">{n.message}</p>
                           </div>
                         </div>
                       ))}
